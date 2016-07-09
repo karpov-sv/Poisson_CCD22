@@ -1,0 +1,6 @@
+# Ignore object files and the executable.
+*.o
+Poisson
+
+# Ignore data files produced by running the examples.
+data/run?/BF*
