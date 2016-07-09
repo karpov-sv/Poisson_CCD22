@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#Author: Craig Lage, NYU; 
+#Author: Craig Lage, NYU;
 #Date: 26-Jan-15
 
 #This program plots the Poisson equation solutions from the C++ Poisson solver
@@ -12,14 +12,14 @@ import sys, time, h5py
 #****************SUBROUTINES*****************
 class Array3dHDF5(object):
     def __init__(self, dir, filebase, LogEField, run):
-        phifile = dir+'/'+filebase+'_'+str(run)+'_phi'
-        rhofile = dir+'/'+filebase+'_'+str(run)+'_rho'
+        phifile = dir+'/'+filebase+'_'+str(run)+'_phi' + '.hdf5'
+        rhofile = dir+'/'+filebase+'_'+str(run)+'_rho' + '.hdf5'
         hdfphi = h5py.File(phifile,'r')
         Dimension = hdfphi[hdfphi.items()[0][0]].attrs[u'Dimension']
         self.nx=Dimension[0]
         self.ny=Dimension[1]
         self.nz=Dimension[2]
-        
+
         Lower_Left = hdfphi[hdfphi.items()[0][0]].attrs[u'Lower_Left']
         self.xmin=Lower_Left[0]
         self.ymin=Lower_Left[1]
@@ -29,16 +29,16 @@ class Array3dHDF5(object):
         self.xmax=Upper_Right[0]
         self.ymax=Upper_Right[1]
         self.zmax=Upper_Right[2]
-        
+
         self.dx=(self.xmax-self.xmin)/self.nx
         self.dy=(self.ymax-self.ymin)/self.ny
         self.dz=(self.zmax-self.zmin)/self.nz
         self.volume = self.dx * self.dy * self.dz
-        
+
         self.x=linspace(self.xmin+self.dx/2,self.xmax-self.dx/2,self.nx)
         self.y=linspace(self.ymin+self.dy/2,self.ymax-self.dy/2,self.ny)
         self.zp=linspace(self.zmin+self.dz/2,self.zmax-self.dz/2,self.nz)
-        self.z=linspace(self.zmin+self.dz/2,self.zmax-self.dz/2,self.nz)        
+        self.z=linspace(self.zmin+self.dz/2,self.zmax-self.dz/2,self.nz)
 
 
         def ZP(z):
@@ -71,9 +71,9 @@ class Array3dHDF5(object):
         hdfrho = h5py.File(rhofile,'r')
         self.rho=array(hdfrho[hdfrho.items()[0][0]])
         if LogEField == 1:
-            Exfile = dir+'/'+filebase+'_'+str(run)+'_Ex'
-            Eyfile = dir+'/'+filebase+'_'+str(run)+'_Ey'
-            Ezfile = dir+'/'+filebase+'_'+str(run)+'_Ez'
+            Exfile = dir+'/'+filebase+'_'+str(run)+'_Ex' + '.hdf5'
+            Eyfile = dir+'/'+filebase+'_'+str(run)+'_Ey' + '.hdf5'
+            Ezfile = dir+'/'+filebase+'_'+str(run)+'_Ez' + '.hdf5'
             hdfEx = h5py.File(Exfile,'r')
             self.Ex=array(hdfEx[hdfEx.items()[0][0]])
             hdfEy = h5py.File(Eyfile,'r')
@@ -144,7 +144,7 @@ ConfigData = ReadConfigFile(configfile)
 outputfilebase = ConfigData["outputfilebase"]
 outputfiledir = ConfigData["outputfiledir"]
 
-dat = Array3dHDF5(outputfiledir, outputfilebase, ConfigData["LogEField"], run) 
+dat = Array3dHDF5(outputfiledir, outputfilebase, ConfigData["LogEField"], run)
 
 # This holds all of the data
 ScaleFactor = ConfigData["ScaleFactor"]
@@ -534,7 +534,7 @@ if ConfigData["LogPixels"] == 1:
     lines.remove(lines[0])
     for line in lines:
         values = line.split()
-        zout = float(values[5])    
+        zout = float(values[5])
         if zout > dat.z[Channelkmax + 3]:
             continue # Skip these in case of LogTracePaths = 1
         xin = float(values[0])
@@ -620,7 +620,7 @@ if ConfigData["LogPixelPaths"] == 1 and ConfigData["LogPixels"] == 1:
             oldxin = xin
             xpaths=[]
             zxpaths=[]
-            
+
         if isnan(xout) or isnan(yout) or isnan(zout):
             continue
         xpaths.append(xout)
@@ -656,7 +656,7 @@ if ConfigData["LogPixelPaths"] == 1 and ConfigData["LogPixels"] == 1:
             oldyin = yin
             ypaths=[]
             zypaths=[]
-            
+
         if isnan(xout) or isnan(yout) or isnan(zout):
             continue
         ypaths.append(yout)

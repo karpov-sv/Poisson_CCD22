@@ -2,5 +2,5 @@
 *.o
 Poisson
 
-# Ignore data files produced by running the examples.
-data/run?/BF*
+# Ignore HDF5 data files.
+*.hdf5
