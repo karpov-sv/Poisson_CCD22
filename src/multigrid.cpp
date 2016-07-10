@@ -1443,7 +1443,7 @@ void MultiGrid::TraceSpot(int m)
   double* point = new double[3];
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
-  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name);
+  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
   ofstream file;
   file.open(filename.c_str());
   file.setf(ios::fixed);
@@ -1540,7 +1540,7 @@ void MultiGrid::TraceGrid(int m)
   double* point = new double[3];
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
-  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name);
+  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
   ofstream file;
   file.open(filename.c_str());
   file.setf(ios::fixed);
@@ -1582,7 +1582,7 @@ void MultiGrid::TraceRegion(int m)
   double* point = new double[3];
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
-  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name);
+  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
   ofstream file;
   file.open(filename.c_str());
   file.setf(ios::fixed);
@@ -1813,7 +1813,7 @@ void MultiGrid::CalculatePixelAreas(int m)
   // Now calculate and print out the pixel areas
   string underscore = "_", slash = "/", vertexname = "Vertices", areaname = "Area";
   string StepNum = boost::lexical_cast<std::string>(m);
-  string areafilename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+areaname);
+  string areafilename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+areaname+".dat");
   ofstream areafile;
   areafile.open(areafilename.c_str());
   areafile.setf(ios::fixed);
@@ -1835,7 +1835,7 @@ void MultiGrid::CalculatePixelAreas(int m)
   printf("Finished writing grid file - %s\n",areafilename.c_str());
 
   // Now print out the pixel vertices
-  string vertexfilename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+vertexname);
+  string vertexfilename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+vertexname+".dat");
   ofstream vertexfile;
   vertexfile.open(vertexfilename.c_str());
   vertexfile.setf(ios::fixed);

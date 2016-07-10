@@ -518,7 +518,7 @@ if ConfigData["LogPixels"] == 1:
     plotcounter = 1
     subplots_adjust(hspace=0.3, wspace=0.1)
 
-    filename = outputfiledir+"/"+outputfilebase+'_'+str(run)+"_Pts"
+    filename = outputfiledir+"/"+outputfilebase+'_'+str(run)+"_Pts.dat"
     file = open(filename,"r")
     lines = file.readlines()
     file.close()
