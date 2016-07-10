@@ -1,6 +1,0 @@
-# Ignore object files and the executable.
-*.o
-Poisson
-
-# Ignore HDF5 data files.
-*.hdf5
