@@ -173,7 +173,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
   iterations =  GetIntParam(inname, "iterations", 3);	// Number of VCycles
 
   // Overall setup
-
+  VerboseLevel = GetIntParam(inname, "VerboseLevel", 1); // 0 - minimal output, 1 - normal, 2 - more verbose.
   SaveData =  GetIntParam(inname, "SaveData", 1);     // 0 - Save only Pts, N save phi,rho,E every Nth step
   SaveElec =  GetIntParam(inname, "SaveElec", 1);     // 0 - Save only Pts, N save Elec every Nth step
   ScaleFactor =  GetIntParam(inname, "ScaleFactor", 1);     // Power of 2 that sets the grid size
@@ -527,7 +527,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
   ChannelCharge =  ChannelDoping * MICRON_PER_CM  * ChargeFactor;
   CSChargeDepth = rho->Z(rho->zp[ChannelStopkmax] + rho->dzp / 2.0) - rho->Z(rho->zp[ChannelStopkmin] - rho->dzp / 2.0);
   CChargeDepth = rho->Z(rho->zp[Channelkmax] + rho->dzp / 2.0) - rho->Z(rho->zp[Channelkmin] - rho->dzp / 2.0);
-  printf("CChargeDepth = %.4f\n",CChargeDepth);
+  if(VerboseLevel > 1) printf("CChargeDepth = %.4f\n",CChargeDepth);
   double ChannelZmin, ChannelZmax, ChannelStopZmin, ChannelStopZmax, ChannelTotal, ChannelStopTotal, DeltaZ;
   ChannelZmin = rho->Z(rho->zp[Channelkmin] - rho->dzp / 2.0);
   ChannelZmax = rho->Z(rho->zp[Channelkmax] + rho->dzp / 2.0);
@@ -538,9 +538,11 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
   // Set the background charge:
 
   double Gox_effective = rho->Z(rho->zp[Channelkmin] - rho->dzp / 2.0) * EPSILON_OX / EPSILON_SI;
-  printf("In SetFixedCharges, BackgroundCharge = %.4f Effective Gate Oxide thickness = %.3f microns.\n",BackgroundDoping*ChargeFactor, Gox_effective);
-  printf("In SetFixedCharges, Channelkmin = %d, Channelkmax = %d, ChannelZWidth = %d grid cells, ChannelCharge = %.4f \n",Channelkmin, Channelkmax, (Channelkmax - Channelkmin + 1), ChannelCharge);
-  printf("In SetFixedCharges, ChannelStopkmin = %d, ChannelStopkmax = %d, ChannelStopZWidth = %d grid cells, ChannelStopCharge = %.4f \n",ChannelStopkmin, ChannelStopkmax, (ChannelStopkmax - ChannelStopkmin + 1), ChannelStopCharge);
+  if(VerboseLevel > 1) {
+      printf("In SetFixedCharges, BackgroundCharge = %.4f Effective Gate Oxide thickness = %.3f microns.\n",BackgroundDoping*ChargeFactor, Gox_effective);
+      printf("In SetFixedCharges, Channelkmin = %d, Channelkmax = %d, ChannelZWidth = %d grid cells, ChannelCharge = %.4f \n",Channelkmin, Channelkmax, (Channelkmax - Channelkmin + 1), ChannelCharge);
+      printf("In SetFixedCharges, ChannelStopkmin = %d, ChannelStopkmax = %d, ChannelStopZWidth = %d grid cells, ChannelStopCharge = %.4f \n",ChannelStopkmin, ChannelStopkmax, (ChannelStopkmax - ChannelStopkmin + 1), ChannelStopCharge);
+  }
   for (i=0; i<rho->nx; i++)
     {
       for (j=0; j<rho->ny; j++)
@@ -658,7 +660,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
 			}
 		}
     }
-  printf("Finished setting Fixed Charges, \n");
+  if(VerboseLevel > 1) printf("Finished setting Fixed Charges, \n");
   //printf("TotalChannelCharge = %.6g\n", TotalChannelCharge);
   fflush(stdout);
   return;
@@ -865,7 +867,7 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
   double PixXmin, PixYmin, AddedHoles, MinusHoles, PartialHoles, TotalAddedHoles = 0.0, ChargeIncrement;
   //ChargeIncrement = -5.0 * ChannelStopCharge / CSChargeDepth / (double)(pow(ScaleFactor, 3.0));
   ChargeIncrement = 20.0 / (double)(pow(ScaleFactor, 3.0));
-  printf("ChargeIncrement = %f\n",ChargeIncrement);
+  if(VerboseLevel > 1) printf("ChargeIncrement = %f\n",ChargeIncrement);
   //  This sets how rapidly we converge to a solution.
   double MaxIncrement = 10000.0;
   double TotHoles = 0.0;
@@ -880,7 +882,7 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
 	    }
 	}
     }
-  printf("Starting adjusting Mobile holes, %.6g total holes.\n", TotHoles);
+  if(VerboseLevel > 1) printf("Starting adjusting Mobile holes, %.6g total holes.\n", TotHoles);
 
   for (n=0; n<NumberofPixelRegions; n++)
     {
@@ -970,8 +972,10 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
 	    }
 	}
     }
-  printf("Finished adjusting Mobile Holes, %.6g added holes, %.6g total holes.\n", TotalAddedHoles, TotHoles);
-  fflush(stdout);
+  if(VerboseLevel > 1) {
+      printf("Finished adjusting Mobile Holes, %.6g added holes, %.6g total holes.\n", TotalAddedHoles, TotHoles);
+      fflush(stdout);
+  }
   return;
 }
 
@@ -1243,8 +1247,10 @@ void MultiGrid::VCycle(Array3D** phi, Array3D** rho, Array2D** BCType, double w,
       SOR(phi[nsteps], rho[nsteps], BCType[nsteps], w);
       error = Error(phi[nsteps], rho[nsteps]);
     }
+    if(VerboseLevel > 1) {
   printf("Completed iterations at resolution %dx%dx%d. Number of steps = %d. Error = %.3g\n",phi[nsteps]->nx-1,phi[nsteps]->ny-1,phi[nsteps]->nz-1,niter,error);
   fflush(stdout);
+  }
   for (i=nsteps; i>0; i--)
     {
       Prolongate(phi[i], phi[i-1], BCType[i-1]);
@@ -1254,8 +1260,10 @@ void MultiGrid::VCycle(Array3D** phi, Array3D** rho, Array2D** BCType, double w,
 	  SOR(phi[i-1], rho[i-1], BCType[i-1], w);
 	}
       error = Error(phi[i-1], rho[i-1]);
+      if(VerboseLevel > 1) {
       printf("Completed iterations at resolution %dx%dx%d. Number of steps = %d. Error = %.3g\n",phi[i-1]->nx-1,phi[i-1]->ny-1,phi[i-1]->nz-1,niter,error);
       fflush(stdout);
+      }
     }
   return;
 }
@@ -1956,6 +1964,6 @@ void MultiGrid::FillRho(Array3D* rho, Array3D* elec, Array3D* hole)
 	    }
 	}
     }
-  printf("Mobile charges added into rho.Total electrons=%.1f, Total holes=%.6g\n", TotalElectrons, TotalHoles);
+  if(VerboseLevel > 1) printf("Mobile charges added into rho.Total electrons=%.1f, Total holes=%.6g\n", TotalElectrons, TotalHoles);
   return;
 }
