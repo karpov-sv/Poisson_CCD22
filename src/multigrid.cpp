@@ -74,6 +74,8 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	  // Now we cycle through the VCycles to solve Poisson's equation
 	  for (int n=0; n<iterations; n++)
 	    {
+          printf("--- Starting VCycle %d / %d for simulation cycle %d / %d of step %d / %d.\n",
+            n + 1, iterations, k + 1, kmax, m + 1, NumSteps);
 	      if (k == kmax - 1)
 		{
 		  VCycle(phi, rho, BCType, w, nsteps, ncycle);
