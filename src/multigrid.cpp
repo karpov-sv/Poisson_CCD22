@@ -1495,6 +1495,9 @@ void MultiGrid::TraceSpot(int m)
 
 void MultiGrid::TraceMultipleSpots(int m)
 {
+  if(VerboseLevel > 1) {
+      printf("Tracing multiple spots for step %d.\n", m);
+  }
   // This builds up multiple Gaussian spots
   // Extents still hard coded - needs some work
   double x, y, z, rsq, v1, v2, fac, xcenter, ycenter;

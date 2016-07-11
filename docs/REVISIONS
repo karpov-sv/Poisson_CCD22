@@ -183,3 +183,5 @@ Poisson_CCD_Hole8 - Attempting to put the AdjustHoles routine deeper into the mu
 
 - Use .hdf5 and .dat extensions for all output files.
 - Add git rules to ignore binary outputs.
+- Add VerboseLevel config option and be less verbose by default.
+- Fix compiler warning.
