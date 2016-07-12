@@ -185,3 +185,6 @@ Poisson_CCD_Hole8 - Attempting to put the AdjustHoles routine deeper into the mu
 - Add git rules to ignore binary outputs.
 - Add VerboseLevel config option and be less verbose by default.
 - Fix compiler warning.
+- Add documentation page describing output files.
+- Add some plot axis labels.
+- Fix plotting crash when NumElec = 0.

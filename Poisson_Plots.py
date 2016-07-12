@@ -520,7 +520,7 @@ xlim(yy[0,0], yy[-1,-1])
 
 savefig(outputfiledir+"/plots/"+outputfilebase+"_Summary_2.pdf")
 
-if ConfigData["LogPixels"] == 1:
+if ConfigData["NumElec"] > 0:
     # Next, plots of the pixel boundaries
     print "Making pixel plots\n"
     figure()
