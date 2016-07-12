@@ -18,4 +18,4 @@ File names ending with `_Ex.hdf5`, `_Ey.hdf5`, or `_Ez.hdf5` contain 3D arrays o
 
 ## Mobile charges
 
-File names ending with `_Elec.hdf5` or `_Hole.hdf5` contain 3D arrays of mobile electron and hole number densities in units of 1/(micron^3).
+File names ending with `_Elec.hdf5` or `_Hole.hdf5` contain 3D arrays of mobile electron and hole counts in each grid cell. In other words, summing these arrays gives the total number of electrons and holes.
