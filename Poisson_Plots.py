@@ -189,14 +189,18 @@ subplot(2,2,1)
 title("Front Edge")
 ylim(-20.0, 10.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.x[:],dat.phi[:,0,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.x[:],dat.phi[:,0,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$x$ [um]')
+plt.ylabel('$\phi(x,y_F,z_0)$ [V]')
 legend()
 
 subplot(2,2,2)
 title("Back Edge")
 ylim(-20.0, 10.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.x[:],dat.phi[:,dat.ny-1,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.x[:],dat.phi[:,dat.ny-1,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$x$ [um]')
+plt.ylabel('$\phi(x,y_B,z_0)$ [V]')
 legend()
 
 subplot(2,2,3)
@@ -206,7 +210,9 @@ if EdgePlot:
 else:
     ylim(-20.0, 10.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.y[:],dat.phi[0,:,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.y[:],dat.phi[0,:,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$y$ [um]')
+plt.ylabel('$\phi(x_L,y,z_0)$ [V]')
 legend()
 
 subplot(2,2,4)
@@ -216,7 +222,9 @@ if EdgePlot:
 else:
     ylim(-20.0, 10.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.y[:],dat.phi[dat.nx-1,:,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.y[:],dat.phi[dat.nx-1,:,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$y$ [um]')
+plt.ylabel('$\phi(x_R,y,z_0)$ [V]')
 legend()
 
 savefig(outputfiledir+"/plots/"+outputfilebase+"_Edge_Potentials.pdf")
@@ -240,6 +248,7 @@ nxcenter3 = nxcenter2 + 4 * GridsPerPixel*ScaleFactor
 plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter2,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2,0:phinumzs]+dat.phi[nxcenter3,nycenter2-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]')
 ylim(-10.0, 15.0)
 xlim(0.0,4.0)
 
@@ -264,6 +273,7 @@ for i in range(1,numzs):
 plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
 ylim(-60.0, 40.0)
 xlim(0.0,4.0)
 nxcenter3 = nxcenter2 + 3 * GridsPerPixel * ScaleFactor / 2
@@ -275,6 +285,7 @@ plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter
 plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter4,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4,0:phinumzs]+dat.phi[nxcenter3,nycenter4-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter4]+dat.y[nycenter4-1])/2.0))
 legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]')
 ylim(-20.0, 15.0)
 xlim(0.0,10.0)
 subplot(2,3,5)
@@ -310,6 +321,7 @@ plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1
 
 legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
 ylim(-200.0, 200.0)
 xlim(0.0,10.0)
 
@@ -319,6 +331,7 @@ subplot(2,3,3)
 title("Phi-Barrier Gate, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
 plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3,0:phinumzs]+dat.phi[nxcenter3,nycenter3-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3-1,0:phinumzs])/4.0)
 xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]')
 ylim(-20.0, 15.0)
 xlim(0.0,4.0)
 subplot(2,3,6)
@@ -332,6 +345,7 @@ for i in range(1,numzs):
 
 plot(zs, rhos)
 xlabel("Z-Dimension (microns)")
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
 ylim(-40.0, 40.0)
 xlim(0.0,4.0)
 savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials.pdf")
@@ -352,7 +366,7 @@ xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
 plot([dat.x[nxmin+1],dat.x[nxmax-1]],[dat.y[nycenter2],dat.y[nycenter2]],ls = "-", color="k")
 plot([dat.x[nxcenter2],dat.x[nxcenter2]],[dat.y[nymin+1],dat.y[nymax-1]],ls = "-", color="k")
-#colorbar()
+colorbar(orientation='horizontal').set_label('$\phi(x,y,z)$ [V]')
 
 subplot(1,2,2)
 title("Phi-Collect Gate, z = %.2f"%dat.z[slicez])
@@ -416,7 +430,7 @@ contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
 #imshow(dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,interpolation = 'None')
 xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 
 subplot(2,2,2, aspect = 1)
 nxmin2 = nxmin - 9 * GridsPerPixel * ScaleFactor / 2
@@ -430,7 +444,7 @@ contour(xx,yy,plotarray, levels, lw=0.1)
 contourf(xx,yy,plotarray, levels)
 xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
-colorbar()
+colorbar().set_label('$\\rho(x,y,z) / \epsilon_{Si}$ [V/um$^2$]')
 
 slicez = 8 * ScaleFactor
 subplot(2,2,3, aspect = 1)
@@ -445,7 +459,7 @@ xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
 plot([dat.x[nxmin+1],dat.x[nxmax-1]],[dat.y[nycenter2],dat.y[nycenter2]],ls = "-", color="k")
 plot([dat.x[nxcenter2],dat.x[nxcenter2]],[dat.y[nymin+1],dat.y[nymax-1]],ls = "-", color="k")
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 
 slicez = 16 * ScaleFactor
 subplot(2,2,4, aspect = 1)
@@ -454,7 +468,7 @@ contour(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,lw=0.1)
 contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
 xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 
 savefig(outputfiledir+"/plots/"+outputfilebase+"_Summary_1.pdf")
 
@@ -476,7 +490,7 @@ nzmax = 16 * ScaleFactor
 [zz,xx] = meshgrid(dat.z[nzmin:nzmax],dat.x[nxmin:nxmax])
 contour(xx,zz,dat.phi[nxmin:nxmax,nycenter2,nzmin:nzmax],levels,lw=0.1)
 contourf(xx,zz,dat.phi[nxmin:nxmax,nycenter2,nzmin:nzmax],levels)
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 if ConfigData["LogEField"] == 1 and PlotEField:
     nzmin = 1
     [zz,xx] = meshgrid(dat.z[nzmin:nzmax],dat.x[nxmin:nxmax])
@@ -494,7 +508,7 @@ nzmin = 0
 [zz,yy] = meshgrid(dat.z[nzmin:nzmax],dat.y[nymin:nymax])
 contour(yy,zz,dat.phi[nxcenter2,nymin:nymax,nzmin:nzmax],levels,lw=0.1)
 contourf(yy,zz,dat.phi[nxcenter2,nymin:nymax,nzmin:nzmax],levels)
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 if ConfigData["LogEField"] == 1 and PlotEField:
     nzmin = 1
     [zz,yy] = meshgrid(dat.z[nzmin:nzmax],dat.y[nymin:nymax])
