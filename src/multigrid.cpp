@@ -1392,6 +1392,30 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   x = point[0]; y = point[1]; z = point[2];
   double*  E_interp = new double[3];
 
+  // id is a unique integer identifier for each electron that we track.
+  static int id = 0;
+  if((LogPixelPaths == 2) && (id == 0)) {
+      // Write header line.
+      file << setw(8) << "id" << setw(8) << "step" << setw(3) << "ph"
+          << setw(15) << "x" << setw(15) << "y" << setw(15) << "z" << endl;
+  }
+  id += 1;
+
+  // phase encodes the tracking phase and is recorded to the Pts file when LogPixelPaths = 2.
+  // 0 - initial position.
+  // 1 - endpoint of a step through the bulk.
+  // 2 - just reached bottom and settling to equilibrium.
+  // 3 - equilibrium motion at the bottom, logging charge.
+  // 4 - final position.
+  int phase = 0;
+
+  if(LogPixelPaths == 2) {
+      // Log initial position.
+      file << setw(8) << id << setw(8) << nsteps << setw(3) << phase
+          << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+  }
+
+  phase = 1;
   while (nsteps < nstepsmax)
     {
       nsteps += 1;
@@ -1422,6 +1446,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 	{
 	  ReachedBottom = true;
 	  nstepsmax = nsteps + bottomsteps + bottomsteps / 10;
+      phase = 2;
 	  // After reaching bottom, iterate bottomsteps (*1.1) more steps.
 	  // The first bottomsteps/10 steps are to let it settle to an
 	  // equilibrium location, then we start logging the charge location
@@ -1429,6 +1454,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
       if (ReachedBottom && nsteps > nstepsmax - bottomsteps)
 	{
 	  //  Start logging location after bottomsteps / 10.
+      phase = (nsteps < nstepsmax) ? 3 : 4;
 	  point[2] = max(zbottom, point[2]);
 	  i = E[0]->XIndex(point[0]);
 	  j = E[0]->YIndex(point[1]);
@@ -1438,6 +1464,11 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 	      elec[0]->data[i + j * elec[0]->nx + k * elec[0]->nx * elec[0]->ny] += bottomcharge;// Add bottomcharge to this grid cell
 	    }
 	}
+    if(LogPixelPaths == 2) {
+        // Log latest position update.
+        file << setw(8) << id << setw(8) << nsteps << setw(3) << phase
+            << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+    }
     }
   delete[] E_interp;
   return;
@@ -1460,7 +1491,9 @@ void MultiGrid::TraceSpot(int m)
   file.setf(ios::showpoint);
   file.setf(ios::left);
   file.precision(4);
-  file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
+  if(LogPixelPaths != 2) {
+      file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
+  }
   xwindow = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
   ywindow = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
   xcenter = (PixelBoundaryUpperRight[0] + PixelBoundaryLowerLeft[0]) / 2.0 + Xoffset;
@@ -1484,7 +1517,9 @@ void MultiGrid::TraceSpot(int m)
       point[2] = z;
       Trace(point, bottomsteps, true, bottomcharge, file);
       // Trace returns the final location
-      file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+      if(LogPixelPaths != 2) {
+          file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+      }
     }
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
@@ -1560,7 +1595,9 @@ void MultiGrid::TraceGrid(int m)
   file.setf(ios::showpoint);
   file.setf(ios::left);
   file.precision(4);
-  file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
+  if(LogPixelPaths != 2) {
+      file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
+  }
 
   x = PixelBoundaryLowerLeft[0] + PixelBoundaryStepSize[0] / 2.0;
   while (x < PixelBoundaryUpperRight[0])
@@ -1573,7 +1610,9 @@ void MultiGrid::TraceGrid(int m)
 	  z = ElectronZ0Fill;
 	  point[2] = z;
 	  Trace(point, 100, false, 0.0, file);
-	  file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+      if(LogPixelPaths != 2) {
+	    file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+      }
 	  y += PixelBoundaryStepSize[1];
 	}
       x += PixelBoundaryStepSize[0];
@@ -1602,7 +1641,9 @@ void MultiGrid::TraceRegion(int m)
   file.setf(ios::showpoint);
   file.setf(ios::left);
   file.precision(4);
-  file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
+  if(LogPixelPaths != 2) {
+      file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
+  }
   for (n=0; n<NumElec; n++)
     {
       if (n%1000==0)
@@ -1617,7 +1658,9 @@ void MultiGrid::TraceRegion(int m)
       z = ElectronZ0Fill;
       point[2] = z;
       Trace(point, 100, false, 0.0, file);
-      file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+      if(LogPixelPaths != 2) {
+          file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
+      }
     }
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
