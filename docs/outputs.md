@@ -19,3 +19,7 @@ File names ending with `_Ex.hdf5`, `_Ey.hdf5`, or `_Ez.hdf5` contain 3D arrays o
 ## Mobile charges
 
 File names ending with `_Elec.hdf5` or `_Hole.hdf5` contain 3D arrays of mobile electron and hole counts in each grid cell. In other words, summing these arrays gives the total number of electrons and holes.
+
+## Electron Paths
+
+File names ending with `_Pts.dat` contain 3D coordinates of electrons traced through the sensor under the influence of the electric field and thermal diffusion.  The number of electrons in the file is set by the `NumElec` parameter and their initial distribution is determined by `PixelBoundaryTestType`.  When `LogPixelPaths = 0`, only the initial and final vertices are logged.  Otherwise, the vertices of each individual scatter are logged, leading to a much bigger file.
