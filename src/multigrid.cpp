@@ -350,7 +350,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
     }
 
     // Filter band configuration.
-    FilterBand = GetStringParam(inname, "FilterBand", "r");
+    FilterBand = GetStringParam(inname, "FilterBand", "none");
     if(FilterBand == "u") {
         FilterIndex = 0;
     }
@@ -1514,6 +1514,17 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   return;
 }
 
+double MultiGrid::GetElectronDepth() {
+    if(FilterIndex >= 0 && FilterIndex < n_band) {
+        int cdf_index = (int)floor(n_filter_cdf * drand48());
+        // The sensor thickness is hardcoded here, as in many other places :-(
+        return 100.0 - filter_cdf[FilterIndex * n_filter_cdf + cdf_index];
+    }
+    else {
+        return ElectronZ0Fill;
+    }
+}
+
 void MultiGrid::TraceSpot(int m)
 {
   // This builds up a Gaussian spot with given center (Xoffset, Yoffset) and SigmaX and SigmaY
@@ -1553,7 +1564,7 @@ void MultiGrid::TraceSpot(int m)
       y = ycenter + Sigmay * v2 * fac;
       point[0] = x;
       point[1] = y;
-      z = ElectronZ0Fill;
+      z = GetElectronDepth();
       point[2] = z;
       Trace(point, bottomsteps, true, bottomcharge, file);
       // Trace returns the final location
