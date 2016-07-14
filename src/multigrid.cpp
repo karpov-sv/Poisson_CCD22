@@ -521,7 +521,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
       ChannelStopkmax = rho->ZIndex(rho->Z(rho->zp[ChannelStopkmin]) + 2.0 * ChannelStopDepth);
     }
   int PixX, PixY;
-  double PixXmin, PixYmin, FRChargeDepth, CChargeDepth;
+  double PixXmin, FRChargeDepth, CChargeDepth;
   double ChargeFactor =  (QE*MICRON_PER_M/(EPSILON_0*EPSILON_SI)) / pow(MICRON_PER_CM, 3);
   // ChargeFactor converts doping in cm^-3 into the appropriate units
   double ChannelCharge, FixedRegionCharge;
@@ -612,7 +612,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
 			  PixX = (int)((rho->x[i] - PixelRegionLowerLeft[n][0]) / PixelSize);
 			  PixY = (int)((rho->y[j] - PixelRegionLowerLeft[n][1]) / PixelSize);
 			  PixXmin = PixelRegionLowerLeft[n][0] + (double)PixX * PixelSize;
-			  PixYmin = PixelRegionLowerLeft[n][1] + (double)PixY * PixelSize;
+			  //PixYmin = PixelRegionLowerLeft[n][1] + (double)PixY * PixelSize;
 			  // Now set the charges
 			  if (rho->x[i] <= PixXmin + ChannelStopWidth/2.0 || rho->x[i] >= PixXmin + PixelSize - ChannelStopWidth/2.0)
 				{
@@ -866,7 +866,7 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
   // It needs to be run iteratively to converge to a solution.
   int i, j, k, n, index, index2;
   int PixX, PixY;
-  double PixXmin, PixYmin, AddedHoles, MinusHoles, PartialHoles, TotalAddedHoles = 0.0, ChargeIncrement;
+  double PixXmin, AddedHoles, MinusHoles, PartialHoles, TotalAddedHoles = 0.0, ChargeIncrement;
   //ChargeIncrement = -5.0 * ChannelStopCharge / CSChargeDepth / (double)(pow(ScaleFactor, 3.0));
   ChargeIncrement = 20.0 / (double)(pow(ScaleFactor, 3.0));
   if(VerboseLevel > 1) printf("ChargeIncrement = %f\n",ChargeIncrement);
@@ -904,7 +904,7 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
 	      PixX = (int)((rho->x[i] - PixelRegionLowerLeft[n][0]) / PixelSize);
 	      PixY = (int)((rho->y[j] - PixelRegionLowerLeft[n][1]) / PixelSize);
 	      PixXmin = PixelRegionLowerLeft[n][0] + (double)PixX * PixelSize;
-	      PixYmin = PixelRegionLowerLeft[n][1] + (double)PixY * PixelSize;
+	      //PixYmin = PixelRegionLowerLeft[n][1] + (double)PixY * PixelSize;
 	      // Now set the charges
 	      if (rho->x[i] <= PixXmin + ChannelStopWidth/2.0 || rho->x[i] >= PixXmin + PixelSize - ChannelStopWidth/2.0)
 		{
@@ -1479,7 +1479,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 void MultiGrid::TraceSpot(int m)
 {
   // This builds up a Gaussian spot with given center (Xoffset, Yoffset) and SigmaX and SigmaY
-  double x, y, z, rsq, v1, v2, fac, xwindow, ywindow, xcenter, ycenter;
+  double x, y, z, rsq, v1, v2, fac, xcenter, ycenter;
   int n;
   int bottomsteps = 1000;
   double bottomcharge = .001;
@@ -1496,8 +1496,8 @@ void MultiGrid::TraceSpot(int m)
   if(LogPixelPaths != 2) {
       file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
   }
-  xwindow = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
-  ywindow = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
+  //xwindow = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
+  //ywindow = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
   xcenter = (PixelBoundaryUpperRight[0] + PixelBoundaryLowerLeft[0]) / 2.0 + Xoffset;
   ycenter = (PixelBoundaryUpperRight[1] + PixelBoundaryLowerLeft[1]) / 2.0 + Yoffset;
   for (n=0; n<NumElec; n++)

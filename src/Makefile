@@ -15,7 +15,7 @@ CFLAGS        = -pipe -O2 -Wall -W
 CXXFLAGS      = -pipe -O2 -Wall -W
 INCPATH       =  -I.  -I$(HDF5_DIR)/include -I$(BOOST_DIR)/include
 LINK          = g++
-LFLAGS        = -Wl
+LFLAGS        =
 LIBS          = -L$(BOOST_DIR)/lib -L$(HDF5_DIR)/lib -lm -lz -lhdf5 -lhdf5_cpp -lpthread
 
 ####### Output directory
