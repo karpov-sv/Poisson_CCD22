@@ -156,6 +156,12 @@ class MultiGrid
   int SaveData;
   int SaveElec;
 
+  string FilterBand;    // One of "u", "g", "r", "i", "z", "y".
+  int FilterIndex;      // 0=u, 1=g, 2=r, 3=i, 4=z, 5=y
+  string FilterFile;    // location of tabulated per-band depth probabilities
+  static const int n_band = 6, n_filter_cdf = 5000;
+  double filter_cdf[n_band * n_filter_cdf];
+
   Array3D** phi;      // Phi arrays
   Array3D** rho;      // Rho arrays
   Array3D** E;

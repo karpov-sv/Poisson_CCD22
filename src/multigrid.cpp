@@ -348,6 +348,44 @@ void MultiGrid::ReadConfigurationFile(string inname)
       NumElec = GetIntParam(inname, "NumElec", 1000);
       NumSteps = GetIntParam(inname, "NumSteps", 100);
     }
+
+    // Filter band configuration.
+    FilterBand = GetStringParam(inname, "FilterBand", "r");
+    if(FilterBand == "u") {
+        FilterIndex = 0;
+    }
+    else if(FilterBand == "g") {
+        FilterIndex = 1;
+    }
+    else if(FilterBand == "r") {
+        FilterIndex = 2;
+    }
+    else if(FilterBand == "i") {
+        FilterIndex = 3;
+    }
+    else if(FilterBand == "z") {
+        FilterIndex = 4;
+    }
+    else if(FilterBand == "y") {
+        FilterIndex = 5;
+    }
+    else {
+        printf("No filter response will be used.\n");
+        FilterIndex = -1;
+    }
+    FilterFile = GetStringParam(inname, "FilterFile", "notebooks/depth_pdf.dat");
+    if(FilterIndex >= 0) {
+        ifstream filter_input(FilterFile);
+        string header;
+        getline(filter_input, header); // Skip header line
+        for(int i = 0; i < n_filter_cdf; i++) {
+            for(int j = 0; j < n_band; j++) {
+                assert(filter_input >> filter_cdf[j * n_filter_cdf + i]);
+            }
+        }
+        filter_input.close();
+    }
+
   outputfilebase  = GetStringParam(inname,"outputfilebase", "Test"); //Output filename base
   outputfiledir  = GetStringParam(inname,"outputfiledir", "data"); //Output filename directory
   return;
