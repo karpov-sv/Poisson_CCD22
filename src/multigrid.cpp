@@ -375,7 +375,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
     }
     FilterFile = GetStringParam(inname, "FilterFile", "notebooks/depth_pdf.dat");
     if(FilterIndex >= 0) {
-        ifstream filter_input(FilterFile);
+        ifstream filter_input(FilterFile.c_str());
         string header;
         getline(filter_input, header); // Skip header line
         for(int i = 0; i < n_filter_cdf; i++) {
