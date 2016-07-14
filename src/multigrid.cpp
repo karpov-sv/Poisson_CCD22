@@ -1955,8 +1955,10 @@ void MultiGrid::CalculatePixelAreas(int m)
   delete[] point;
   for (pixx=0; pixx<PixelBoundaryNx; pixx++)
     {
+      if(pixx < nskip || pixx >= PixelBoundaryNx - nskip) continue;
       for (pixy=0; pixy<PixelBoundaryNy; pixy++)
 	{
+      if(pixy < nskip || pixy >= PixelBoundaryNy - nskip) continue;
 	  delete polyarray[pixx + PixelBoundaryNx * pixy];
 	}
     }
