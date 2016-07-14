@@ -520,7 +520,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
     {
       ChannelStopkmax = rho->ZIndex(rho->Z(rho->zp[ChannelStopkmin]) + 2.0 * ChannelStopDepth);
     }
-  int PixX, PixY;
+  int PixX;
   double PixXmin, FRChargeDepth, CChargeDepth;
   double ChargeFactor =  (QE*MICRON_PER_M/(EPSILON_0*EPSILON_SI)) / pow(MICRON_PER_CM, 3);
   // ChargeFactor converts doping in cm^-3 into the appropriate units
@@ -610,7 +610,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2D* BCType)
 				}
 			  index = i + j * rho->nx;
 			  PixX = (int)((rho->x[i] - PixelRegionLowerLeft[n][0]) / PixelSize);
-			  PixY = (int)((rho->y[j] - PixelRegionLowerLeft[n][1]) / PixelSize);
+			  //PixY = (int)((rho->y[j] - PixelRegionLowerLeft[n][1]) / PixelSize);
 			  PixXmin = PixelRegionLowerLeft[n][0] + (double)PixX * PixelSize;
 			  //PixYmin = PixelRegionLowerLeft[n][1] + (double)PixY * PixelSize;
 			  // Now set the charges
@@ -865,7 +865,7 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
   // the channel stop region to be equal to Vchannelstop.
   // It needs to be run iteratively to converge to a solution.
   int i, j, k, n, index, index2;
-  int PixX, PixY;
+  int PixX;
   double PixXmin, AddedHoles, MinusHoles, PartialHoles, TotalAddedHoles = 0.0, ChargeIncrement;
   //ChargeIncrement = -5.0 * ChannelStopCharge / CSChargeDepth / (double)(pow(ScaleFactor, 3.0));
   ChargeIncrement = 20.0 / (double)(pow(ScaleFactor, 3.0));
@@ -902,7 +902,7 @@ void MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
 		}
 	      index = i + j * rho->nx;
 	      PixX = (int)((rho->x[i] - PixelRegionLowerLeft[n][0]) / PixelSize);
-	      PixY = (int)((rho->y[j] - PixelRegionLowerLeft[n][1]) / PixelSize);
+	      //PixY = (int)((rho->y[j] - PixelRegionLowerLeft[n][1]) / PixelSize);
 	      PixXmin = PixelRegionLowerLeft[n][0] + (double)PixX * PixelSize;
 	      //PixYmin = PixelRegionLowerLeft[n][1] + (double)PixY * PixelSize;
 	      // Now set the charges
