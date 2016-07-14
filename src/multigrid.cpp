@@ -134,10 +134,12 @@ MultiGrid::MultiGrid(string inname) //Constructor
       if (SaveData !=0 && m % SaveData == 0)
 	{
 	  WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "phi", phi[0]);
-	  WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "rho", rho[0]);
-	  WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "Ex", E[0]);
-	  WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "Ey", E[1]);
-	  WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "Ez", E[2]);
+      WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "rho", rho[0]);
+      if(LogEField > 0) {
+          WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "Ex", E[0]);
+          WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "Ey", E[1]);
+          WriteOutputFile(outputfiledir, outputfilebase+underscore+StepNum, "Ez", E[2]);
+      }
 	}
     }
   return;
@@ -1806,16 +1808,29 @@ void MultiGrid::CalculatePixelAreas(int m)
   string ptsfilename = (dummy);
   ofstream ptsfile; //Not needed, but we need to pass something to the Trace subroutine
 
+  // Number of pixels around the edges to omit from the area calculations, to save time.
+  int nskip = 3;
+
   // Now calculate the pixel vertices
   Polygon** polyarray = new Polygon*[PixelBoundaryNx * PixelBoundaryNy];
   x = PixelBoundaryLowerLeft[0] + PixelSize / 2.0;
   while (x < PixelBoundaryUpperRight[0])
     {
       pixx = (int)floor((x - PixelBoundaryLowerLeft[0]) / PixelSize);
+      // Skip edge pixels, if requested.
+      if(pixx < nskip || pixx >= PixelBoundaryNx - nskip) {
+          x += PixelSize;
+          continue;
+      }
       y = PixelBoundaryLowerLeft[1] + PixelSize / 2.0;
       while (y < PixelBoundaryUpperRight[1])
 	{
 	  pixy = (int)floor((y - PixelBoundaryLowerLeft[1]) / PixelSize);
+      // Skip edge pixels, if requested.
+      if(pixy < nskip || pixy >= PixelBoundaryNy - nskip) {
+          y += PixelSize;
+          continue;
+      }
 	  polyarray[pixx + PixelBoundaryNx * pixy] = new Polygon(4 * NumVertices + 4);
 	  //First, find the four corners
 	  for (n=1; n<8; n+=2)
@@ -1879,8 +1894,12 @@ void MultiGrid::CalculatePixelAreas(int m)
   areafile  << setw(15) << "Nx" << setw(15) << "Ny" << setw(15) << "Area" << endl;
   for (pixx=0; pixx<PixelBoundaryNx; pixx++)
     {
+      // Skip edge pixels, if requested.
+      if(pixx < nskip || pixx >= PixelBoundaryNx - nskip) continue;
       for (pixy=0; pixy<PixelBoundaryNy; pixy++)
 	{
+      // Skip edge pixels, if requested.
+      if(pixy < nskip || pixy >= PixelBoundaryNy - nskip) continue;
 	  area = polyarray[pixx + PixelBoundaryNx * pixy]->Area();
 	  printf("Found area, pixx = %d, pixy = %d, area = %.3f\n",pixx, pixy, area);
 	  fflush(stdout);
@@ -1903,10 +1922,20 @@ void MultiGrid::CalculatePixelAreas(int m)
   while (x < PixelBoundaryUpperRight[0])
     {
       pixx = (int)floor((x - PixelBoundaryLowerLeft[0]) / PixelSize);
+      // Skip edge pixels, if requested.
+      if(pixx < nskip || pixx >= PixelBoundaryNx - nskip) {
+          x += PixelSize;
+          continue;
+      }
       y = PixelBoundaryLowerLeft[1] + PixelSize / 2.0;
       while (y < PixelBoundaryUpperRight[1])
 	{
 	  pixy = (int)floor((y - PixelBoundaryLowerLeft[1]) / PixelSize);
+      // Skip edge pixels, if requested.
+      if(pixy < nskip || pixy >= PixelBoundaryNy - nskip) {
+          y += PixelSize;
+          continue;
+      }
 	  for (n=0; n<polyarray[pixx + PixelBoundaryNx * pixy]->npoints; n++)
 	    {
 	      xb = polyarray[pixx + PixelBoundaryNx * pixy]->pointlist[n]->x;
