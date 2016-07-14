@@ -111,7 +111,7 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	{
 	  TraceSpot(m);
 	}
-      if (PixelBoundaryTestType == 2)
+      if (PixelBoundaryTestType == 2 || PixelBoundaryTestType == 4)
 	{
 	  TraceRegion(m);
 	}
@@ -343,7 +343,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
       Xoffset = GetDoubleParam(inname, "Xoffset", 0.0);
       Yoffset = GetDoubleParam(inname, "Yoffset", 0.0);
     }
-  if (PixelBoundaryTestType == 2)
+  if((PixelBoundaryTestType == 2) || (PixelBoundaryTestType == 4))
     {
       NumElec = GetIntParam(inname, "NumElec", 1000);
       NumSteps = GetIntParam(inname, "NumSteps", 100);
@@ -1514,7 +1514,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   return;
 }
 
-double MultiGrid::GetElectronDepth() {
+double MultiGrid::GetElectronInitialZ() {
     if(FilterIndex >= 0 && FilterIndex < n_band) {
         int cdf_index = (int)floor(n_filter_cdf * drand48());
         // The sensor thickness is hardcoded here, as in many other places :-(
@@ -1564,7 +1564,7 @@ void MultiGrid::TraceSpot(int m)
       y = ycenter + Sigmay * v2 * fac;
       point[0] = x;
       point[1] = y;
-      z = GetElectronDepth();
+      z = GetElectronInitialZ();
       point[2] = z;
       Trace(point, bottomsteps, true, bottomcharge, file);
       // Trace returns the final location
@@ -1621,7 +1621,7 @@ void MultiGrid::TraceMultipleSpots(int m)
 	      y = ycenter + (double)j * PixelSize + Sigmay * v2 * fac;
 	      point[0] = x;
 	      point[1] = y;
-	      z = ElectronZ0Fill;
+	      z = GetElectronInitialZ();
 	      point[2] = z;
 	      Trace(point, bottomsteps, true, bottomcharge, dummyfile);
 	      // Trace returns the final location
@@ -1658,7 +1658,7 @@ void MultiGrid::TraceGrid(int m)
 	{
 	  point[0] = x;
 	  point[1] = y;
-	  z = ElectronZ0Fill;
+	  z = GetElectronInitialZ();
 	  point[2] = z;
 	  Trace(point, 100, false, 0.0, file);
       if(LogPixelPaths != 2) {
@@ -1666,7 +1666,7 @@ void MultiGrid::TraceGrid(int m)
       }
 	  y += PixelBoundaryStepSize[1];
 	}
-      x += PixelBoundaryStepSize[0];
+
     }
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
@@ -1695,6 +1695,10 @@ void MultiGrid::TraceRegion(int m)
   if(LogPixelPaths != 2) {
       file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
   }
+
+  double x_center = 0.5 * (PixelBoundaryLowerLeft[0] + PixelBoundaryUpperRight[0]);
+  double y_center = 0.5 * (PixelBoundaryLowerLeft[1] + PixelBoundaryUpperRight[1]);
+
   for (n=0; n<NumElec; n++)
     {
       if (n%1000==0)
@@ -1702,11 +1706,17 @@ void MultiGrid::TraceRegion(int m)
 	  printf("Finished %d electrons\n",n);
 	  fflush(stdout);
 	}
-      x = PixelBoundaryLowerLeft[0] + drand48() * boxx;
-      y = PixelBoundaryLowerLeft[1] + drand48() * boxy;
+      if(PixelBoundaryTestType == 4) {
+          x = x_center + (drand48() - 0.5) * PixelSize;
+          y = y_center + (drand48() - 0.5) * PixelSize;
+      }
+      else {
+          x = PixelBoundaryLowerLeft[0] + drand48() * boxx;
+          y = PixelBoundaryLowerLeft[1] + drand48() * boxy;
+      }
       point[0] = x;
       point[1] = y;
-      z = ElectronZ0Fill;
+      z = GetElectronInitialZ();
       point[2] = z;
       Trace(point, 100, false, 0.0, file);
       if(LogPixelPaths != 2) {

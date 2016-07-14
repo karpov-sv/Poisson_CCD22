@@ -187,7 +187,7 @@ class MultiGrid
   void VCycle(Array3D**, Array3D**, Array2D**, double, int, int);
   void WriteOutputFile(string, string, string, Array3D*);
   void Gradient(Array3D*, Array3D**);
-  double GetElectronDepth();
+  double GetElectronInitialZ();
   void Trace(double*, int, bool, double, ofstream&);
   void TraceSpot(int);
   void TraceMultipleSpots(int);
