@@ -1740,6 +1740,9 @@ void MultiGrid::TraceRegion(int m)
       file  << setw(15) << "xin" << setw(15) << "yin" << setw(15) << "zin" << setw(15) << "xout" << setw(15) << "yout" << setw(15) << "zout" << endl;
   }
 
+  // Initialize for PixelBoundaryTestType == 4 mode.
+  int bottomsteps = 1000;
+  double bottomcharge = .001;
   double x_center = 0.5 * (PixelBoundaryLowerLeft[0] + PixelBoundaryUpperRight[0]);
   double y_center = 0.5 * (PixelBoundaryLowerLeft[1] + PixelBoundaryUpperRight[1]);
 
@@ -1762,7 +1765,14 @@ void MultiGrid::TraceRegion(int m)
       point[1] = y;
       z = GetElectronInitialZ();
       point[2] = z;
-      Trace(point, 100, false, 0.0, file);
+      if(PixelBoundaryTestType == 4) {
+          // Accumulate charge, the same as TraceSpot().
+          Trace(point, bottomsteps, true, bottomcharge, file);
+      }
+      else {
+          // Do not accumulate charge, for backwards compatibility.
+          Trace(point, 100, false, 0.0, file);
+      }
       if(LogPixelPaths != 2) {
           file  << setw(15) << x << setw(15) << y << setw(15) << z << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
       }
