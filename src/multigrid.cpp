@@ -38,6 +38,8 @@ MultiGrid::MultiGrid(string inname) //Constructor
   E = new Array3D*[3];
 
   BuildArrays(phi, rho, elec, E, BCType);
+  // Save coordinate grid along each axis.
+  SaveGrid();
   printf("Finished Building Arrays. \n");
   Channelkmin = phi[0]->ZIndex(GateOxide * EPSILON_SI / EPSILON_OX) + 1;
   ChannelStopkmin = Channelkmin;
@@ -165,6 +167,48 @@ MultiGrid::~MultiGrid() //Destructor
   delete[] elec;
   delete[] BCType;
   return;
+}
+
+void MultiGrid::SaveGrid() {
+    printf("Saving coordinate grids.\n");
+    string grid_name = outputfiledir + "/grid_";
+
+    // The phi, rho, Ex, Ey, Ez arrays all use the same grid.
+    Array3D *A = phi[0];
+
+    string xgrid_name = grid_name + "x.dat";
+    ofstream xgrid_out(xgrid_name.c_str());
+    xgrid_out << A->x[0] - 0.5 * A->dx << endl;
+    for(int i = 0; i < A->nx; ++i) {
+        xgrid_out << A->x[i] + 0.5 * A->dx << endl;
+    }
+    xgrid_out.close();
+
+    string ygrid_name = grid_name + "y.dat";
+    ofstream ygrid_out(ygrid_name.c_str());
+    ygrid_out << A->y[0] - 0.5 * A->dy << endl;
+    for(int i = 0; i < A->ny; ++i) {
+        ygrid_out << A->y[i] + 0.5 * A->dy << endl;
+    }
+    ygrid_out.close();
+
+    string zgrid_name = grid_name + "z.dat";
+    ofstream zgrid_out(zgrid_name.c_str());
+    zgrid_out << A->Z(A->zp[0] - 0.5 * A->dzp) << endl;
+    for(int i = 0; i < A->nz; ++i) {
+        zgrid_out << A->Z(A->zp[i] + 0.5 * A->dzp) << endl;
+    }
+    zgrid_out.close();
+
+    // The elec and hole arrays use a different grid along z.
+    A = elec[0];
+    string zegrid_name = grid_name + "ze.dat";
+    ofstream zegrid_out(zegrid_name.c_str());
+    zegrid_out << A->Z(A->zp[0] - 0.5 * A->dzp) << endl;
+    for(int i = 0; i < A->nz; ++i) {
+        zegrid_out << A->Z(A->zp[i] + 0.5 * A->dzp) << endl;
+    }
+    zegrid_out.close();
 }
 
 void MultiGrid::ReadConfigurationFile(string inname)

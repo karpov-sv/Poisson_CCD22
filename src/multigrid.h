@@ -174,6 +174,7 @@ class MultiGrid
 
   void ReadConfigurationFile(string);
   void BuildArrays(Array3D**, Array3D**, Array3D**, Array3D**, Array2D**);
+  void SaveGrid();
   void SetInitialVoltages(Array3D*, Array2D*);
   void SetFixedCharges(Array3D*, Array2D*);
   void SetInitialElectrons(Array3D*, Array3D*);
