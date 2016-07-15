@@ -101,10 +101,6 @@ MultiGrid::MultiGrid(string inname) //Constructor
       time1 = time(NULL);
 
       // Now we trace the electrons.
-      if (PixelAreas >= 0 && m % PixelAreas == 0 && m != 0)
-	{
-	  CalculatePixelAreas(m);
-	}
       if (PixelBoundaryTestType == 0)
 	{
 	  TraceGrid(m);
@@ -121,6 +117,11 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	{
 	  TraceMultipleSpots(m);
 	}
+    // Calculate pixel areas after tracing electrons, if requested.
+    if (PixelAreas >= 0 && (m % PixelAreas) == 0)
+    {
+        CalculatePixelAreas(m);
+    }
       // Now, we write out the potential and charge density results
 
       time2 = time(NULL);
@@ -365,6 +366,8 @@ void MultiGrid::ReadConfigurationFile(string inname)
   NumVertices = GetIntParam(inname,"NumVertices",2);
   ElectronZ0Area = GetDoubleParam(inname,"ElectronZ0Area",100.0);
   ElectronZ0Fill = GetDoubleParam(inname,"ElectronZ0Fill",100.0);
+  PixelBoundaryNx = GetIntParam(inname, "PixelBoundaryNx", 9);
+  PixelBoundaryNy = GetIntParam(inname, "PixelBoundaryNy", 9);
 
   if (PixelBoundaryTestType == 0)
     {
@@ -378,8 +381,6 @@ void MultiGrid::ReadConfigurationFile(string inname)
     }
   if (PixelBoundaryTestType == 1)
     {
-      PixelBoundaryNx = GetIntParam(inname, "PixelBoundaryNx", 9);
-      PixelBoundaryNy = GetIntParam(inname, "PixelBoundaryNy", 9);
       NumElec = GetIntParam(inname, "NumElec", 1000);
       NumSteps = GetIntParam(inname, "NumSteps", 100);
       Sigmax = GetDoubleParam(inname, "Sigmax", 1.0);
@@ -1756,14 +1757,15 @@ void MultiGrid::TraceRegion(int m)
       if(PixelBoundaryTestType == 4) {
           x = x_center + (drand48() - 0.5) * PixelSize;
           y = y_center + (drand48() - 0.5) * PixelSize;
+          z = GetElectronInitialZ();
       }
       else {
           x = PixelBoundaryLowerLeft[0] + drand48() * boxx;
           y = PixelBoundaryLowerLeft[1] + drand48() * boxy;
+          z = ElectronZ0Fill;
       }
       point[0] = x;
       point[1] = y;
-      z = GetElectronInitialZ();
       point[2] = z;
       if(PixelBoundaryTestType == 4) {
           // Accumulate charge, the same as TraceSpot().
