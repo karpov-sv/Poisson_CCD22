@@ -80,9 +80,12 @@ def read_step(
 
     # Read outputs from this step into arrays.
     base_name = os.path.join(path, band, name.format(band=band, index=index))
-    elec = read_hdf5_array(base_name + '_Elec.hdf5', verbose)
-    hole = read_hdf5_array(base_name + '_Hole.hdf5', verbose)
-    phi = read_hdf5_array(base_name + '_phi.hdf5', verbose)
+    try:
+        elec = read_hdf5_array(base_name + '_Elec.hdf5', verbose)
+        hole = read_hdf5_array(base_name + '_Hole.hdf5', verbose)
+        phi = read_hdf5_array(base_name + '_phi.hdf5', verbose)
+    except IOError as e:
+        raise RuntimeError('Cannot read {0}'.format(base_name))
 
     nelec, nhole = np.sum(elec), np.sum(hole)
     pix_elec = pixel_sum(elec)
@@ -216,7 +219,7 @@ def main():
             try:
                 read_step(band=band, index=index, path=path)
             except Exception as e:
-                print(e.__class__.__name__)
+                print(str(e))
 
 
 if __name__ == '__main__':

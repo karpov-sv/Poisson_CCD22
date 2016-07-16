@@ -16,7 +16,7 @@ nohup src/Poisson data/bands/y-band.cfg > data/bands/y-band.log 2>&1 &
 
 Make plots using:
 ```
-export POISSON_BANDS=/data/desc/poisson/bands/
+export POISSON_BANDS=/data/desc/poisson/bands
 cd data/bands
 ./make_plots.py
 ```
