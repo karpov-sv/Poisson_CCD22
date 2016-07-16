@@ -61,7 +61,11 @@ def read_step(
     xy_lo, xy_hi = -0.5 * pix_size * npix, 0.5 * pix_size * npix
 
     # Load coordinate grids.
-    x_grid, y_grid, z_grid, ze_grid = load_grid(path)
+    grid_path = os.path.join(path, band)
+    try:
+        x_grid, y_grid, z_grid, ze_grid = load_grid(path=grid_path)
+    except Exception as e:
+        raise RuntimeError('Cannot read grids from {0}'.format(grid_path))
     x_center = 0.5 * (x_grid[1:] + x_grid[:-1]) - 0.5 * grid_size
     y_center = 0.5 * (y_grid[1:] + y_grid[:-1]) - 0.5 * grid_size
     z_center = 0.5 * (z_grid[1:] + z_grid[:-1])
