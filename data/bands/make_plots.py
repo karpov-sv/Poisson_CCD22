@@ -204,7 +204,7 @@ def read_step(
 
     plt.tight_layout()
     if save:
-        plt.savefig('plot-{band}-{index}.png'.format(band=band, index=index))
+        plt.savefig('plots/{band}-{index}.png'.format(band=band, index=index))
 
 
 def main():
