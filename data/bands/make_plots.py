@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import os.path
 
 import numpy as np
@@ -53,8 +54,7 @@ def load_grid(path):
 
 
 def read_step(
-    index=20, band='y', name='BF_256_9x9_{band}_{index}',
-    path='/Users/david/Cosmo/DESC/Sensors/code/Poisson_CCD22/data/bands/',
+    index=20, band='y', name='BF_256_9x9_{band}_{index}', path=None,
     npix=3, pix_size=10., grid_size=110., nslab=4, save=True,
     verbose=False, log_color=True, V0=5.75):
 
@@ -208,11 +208,13 @@ def read_step(
 
 
 def main():
+
+    path = os.environ['POISSON_BANDS']
     for band in 'ugrizy':
         for index in range(0, 110, 10):
             print('Processing {0} {1}'.format(band, index))
             try:
-                read_step(band=band, index=index)
+                read_step(band=band, index=index, path=path)
             except Exception as e:
                 print(e.__class__.__name__)
 
