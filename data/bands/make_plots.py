@@ -212,7 +212,7 @@ def read_step(
     plt.tight_layout()
     if save:
         plt.savefig('plots/{band}-{index}.png'.format(band=band, index=index))
-    plt.clf()
+    plt.close('all')
 
 
 def main():
