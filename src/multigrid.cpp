@@ -97,7 +97,7 @@ MultiGrid::MultiGrid(string inname) //Constructor
       time1 = time(NULL);
 
       // Now we trace the electrons.
-      if (PixelAreas >= 0 && m % PixelAreas == 0 && m != 0)
+      if (PixelAreas >= 0 && m % PixelAreas == 0)
 	{
 	  CalculatePixelAreas(m);
 	}
