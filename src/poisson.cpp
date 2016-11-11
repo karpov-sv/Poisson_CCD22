@@ -1,7 +1,7 @@
 /*
   ------------------------------------------------------------------------------
   Author: Craig Lage, UC Davis
-  Date: Dec 3, 2014
+  Date: Sep 30, 2016
 
   Standalone cpp Poisson solver
 

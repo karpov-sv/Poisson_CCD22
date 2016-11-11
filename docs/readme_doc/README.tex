@@ -42,7 +42,7 @@ minus3pt\let\@listi\@listI}
 \author{Craig Lage}
 \maketitle
 \section{Description}
-This code is a simple grid-based Poisson's equation solver intended to simulate pixel distortion effects in thick fully-depleted CCD's.  The code builds a 3D rectilinear grid to represent a portion of the CCD, assigns the appropriate charge densities and applied potentials, then solves Poisson's equation using multi-grid methods.  A $360^3$ grid, which is adequate for most purposes, solves in less than one minute on a typical laptop.  The code also includes prescriptions to propagate electrons from a given point of creation by an incoming photon down to the point of collection, including both drift and diffusion.  Most data is saved as hdf files.  The current code is configured to model the ITL STA3800 CCD, but other CCDs can be modeled by editting the configuration file.  Plotting routines are available to plot the potentials, E-Fields, pixel shapes, and electron paths.  A description of the code, the measurements which were used to validate the code, and some samples of the output are in the file docs/BF\_White\_Paper\_24Feb16.pdf.  There are also some movies generated with the code in the docs directory.  Below is a basic description of how to install the code and a number of examples.
+This code is a simple grid-based Poisson's equation solver intended to simulate pixel distortion effects in thick fully-depleted CCD's.  The code builds a 3D rectilinear grid to represent a portion of the CCD, assigns the appropriate charge densities and applied potentials, then solves Poisson's equation using multi-grid methods.  A $360^3$ grid, which is adequate for most purposes, solves in less than one minute on a typical laptop.  The code also includes prescriptions to propagate electrons from a given point of creation by an incoming photon down to the point of collection, including both drift and diffusion.  Most data is saved as hdf files.  The current code is configured to model the ITL STA3800 CCD, but other CCDs can be modeled by editting the configuration file.  Plotting routines are available to plot the potentials, E-Fields, pixel shapes, and electron paths.  A description of the code, the measurements which were used to validate the code, and some samples of the output are in the file docs/BF\_White\_Paper\_28Sep16.pdf.  Below is a basic description of how to install the code and a number of examples.
 
 
 The code contains many options, and not all combinations have been tested together.  If you find a set of options that does not work as you expect, please let me know.  However, all of the example configuration files described in the Examples Section below have been tested.
@@ -85,94 +85,108 @@ Running the python plotting routines also requires that you install h5py so that
 
 If you run the forward modeling code in order to generate brighter-fatter plots as described in the bfrun1 example below, you will also need to build the forward.so Python extension.  Instructions for this are in the forward\_model\_varying\_i directory.
 
-\section{Examples}
+\section{Changes in Most Recent Version}
 
-There are a total of six examples included with the code.  Each example is in a separate directory in the data directory, and has a configuration file of the form *.cfg. The parameters in the *.cfg files are commented to explain(hopefully) the purpose of each parameter. Python plotting routines are included with instructions below on how to run the plotting routines and the expected output.  The plot outputs are placed in the data/*run*/plots files, so you can see the expected plots without having to run the code.  If you edit the .cfg files, it is likely that you will need to cutomize the Python plotting routines as well.
+There are a number of changes and new control parameters in this more recent version.  These are as follows:
 
 \begin{itemize}
-  \item Example 1: data/run1/bf.cfg
+  \item {\bf File Formatting:} All output files are now have extensions of either ``.hdf5'' or ``.dat'' to make it clearer what type of file they are.
+
+  \item {\bf Changes to Formatting of Pts files:} The ``*\_Pts.dat'', files, which have the information on electron tracking, have been re-formatted based on input and code from David Kirkby.  The files now have a unique ID for each electron, and phase information of where the electron is in its track.
+
+  \item {\bf Non-Linear Z-axis:} This option ``stretches'' the z-axis to put more grid cells near the bottom of the silicon where things are changing rapidly, and fewer grid cells at the top where things change slowly.  This allows higher resolution without increasing compute time significantly.  It is controlled by the parameter ``NZExp'', which is the stretch factor at z=0.  A value of NZExp = 1.0 reverts to a linear z-axis.  A value of NZExp = 10.0 is recommended.  This option was also in the ``hole7'' branch, but was hard coded at a value of NZExp = 10.0.  More details are in Appendix D of the wihte paper BF\_WP\_11Nov16.pdf.
+
+  \item {\bf Ability to read in and continue a long simulation:} The control parameters ``Continuation'' and ``LastContinuationStep'' allow you to read in the mobile charge locations and contniue a simulation from where it left off.  This is useful for simulations which have crashed or run out of time.
+
+  \item {\bf Option of free holes in the channel stop region:} One hypothesis still being explored is that the channel stop region is not fully depleted, and that there are free holes present in this region.  This option was hard coded into the earlier ``hole7'' branch, but is now available as an option.  It is controlled by the ``UndepletedChannelStop'' parameter (0 = no free holes; 1= free holes), and the ``Vchannelstop'' and ``HoleConvergenceVoltage'' parameters.  The output file ``*\_Hole.hdf5'' contains the locations of the free holes.  It has been found that the inclusion of free holes in the channel stop region gives better agreement with measurements of the ``brighter-fatter effect''.
+
+  \item {\bf Better control of electron tracking:} Two parameters, ``EquilibrateSteps'' and ``BottomSteps'' have been added to give better control of the electron tracking.  The first (which was previously hard coded at 100) counts the number of diffusion steps after the electron reaches the collecting well before we start storing the charge location, and the second (which was previously hard coded at 1000) counts the number of diffusion steps after the electron reaches the collecting well after we start storing the charge location.
+
+    \item {\bf Output of Grid files:} The code now outputs files called *\_grid.dat (*=x,y,z) to document the grids used.  This is based on a suggestion from David Kirkby, and makes the plotting much easier and more correct.  This revision
+chnages the format from what David had suggested in order to include the cell boundaries as well as the cell center.  This is needed to accomodate the non-linear Z-axis discussed above.
+  
+\end{itemize}
+
+\section{Examples}
+
+There are a total of nine examples included with the code.  Each example is in a separate directory in the data directory, and has a configuration file of the form *.cfg. The parameters in the *.cfg files are commented to explain(hopefully) the purpose of each parameter. Python plotting routines are included with instructions below on how to run the plotting routines and the expected output.  The plot outputs are placed in the data/*run*/plots files, so you can see the expected plots without having to run the code.  If you edit the .cfg files, it is likely that you will need to cutomize the Python plotting routines as well.
+
+\begin{itemize}
+  \item Example 0: data/run0/bf.cfg
     \begin{enumerate}
       \item Purpose: A simple 9x9 grid of pixels.  The central pixel contains 200,000 electrons with an assumed charge density (adjustable in the .cfg file).  No electron tracking or pixel boundary plotting is done.  
-      \item Syntax: src/Poisson data/run1/bf.cfg
+      \item Syntax: src/Poisson data/run0/bf.cfg
       \item Expected run time: $\rm \approx 2 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/run1/bf.cfg 0
+      \item Plot Syntax: python Poisson\_Plots.py data/run0/bf.cfg 0
       \item Expected plot run time: $\rm <1 minute$.
       \item Plot output: Assumed boundary potentials and charge distribution as well as several views of the potential solution. 
     \end{enumerate}
 
-      \item Example2: data/run2/bf.cfg
+      \item Example1: data/run1/bf.cfg
     \begin{enumerate}
-      \item Purpose: The same as run1 above, but after solving Poisson's equation, a grid of electrons is traced to illustrate the pixel boundaries and electron paths. Diffusion is turned off for this electron tracing so one can see the impact of the brighter-fatter effect on distorting the electron paths around the central pixel.  Plotting of the pixel boundaries and electron paths is relatively slow.
-      \item Syntax: src/Poisson data/run2/bf.cfg
-      \item Expected run time: $\rm \approx 10 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/run2/bf.cfg 0
-      \item Expected plot run time: $\rm <20 minute$.
-      \item Plot output: In addition to the plots from run1, there are plots of the pixels and electron paths.        
-      \item Plot Syntax: python ChargeDistribution.py data/run2/bf.cfg 0
+      \item Purpose: The same as run0 above, but after solving Poisson's equation, a grid of electrons is traced to illustrate the pixel boundaries and electron paths. Diffusion is turned off for this electron tracing so one can see the impact of the brighter-fatter effect on distorting the electron paths around the central pixel.  Plotting of the pixel boundaries and electron paths is relatively slow.
+      \item Syntax: src/Poisson data/run1/bf.cfg
+      \item Expected run time: $\rm \approx 1 hour$.
+      \item Plot Syntax: python Poisson\_Plots.py data/run1/bf.cfg 0
+      \item Expected plot run time: $\rm \approx 2 minute$.
+      \item Plot output: In addition to the plots from run0, there are plots of the pixels and electron paths.        
+      \item Plot Syntax: python ChargeDistribution\_XYZ\_N.py data/run1/bf.cfg 0 9
       \item Expected plot run time: a few seconds.
-      \item Plot output: The assumed charge distribution of the collected electrons, as defined by the CollectedCharge*min(max) parameters in the .cfg file.
+      \item Plot output: The assumed charge distribution of the collected electrons, as defined by the CollectedCharge*min(max) parameters in the .cfg file, as well as the distribution of free holes.
     \end{enumerate}
 
-      \item Example 3: data/run3/bf.cfg
+      \item Example 2: data/run2/bf.cfg
     \begin{enumerate}
       \item Purpose: The same as run1 above, but after solving Poisson's equation, the pixel boundaries and areas are found through a binary search which tracks the electrons down to a pixel location. 
+      \item Syntax: src/Poisson data/run2/bf.cfg
+      \item Expected run time: $\rm \approx 1 hour$.
+      \item Plot Syntax: python Poisson\_Plots.py data/run2/bf.cfg 0
+      \item Expected plot run time: $\rm \approx 2 minute$.
+      \item Plot Syntax: python ChargeDistribution\_XYZ\_N.py data/run2/bf.cfg 0 9
+      \item Expected plot run time: a few seconds.
+      \item Plot output: The assumed charge distribution of the collected electrons, as defined by the CollectedCharge*min(max) parameters in the .cfg file, as well as the distribution of free holes.
+      \item Plot Syntax: python VertexPlot.py data/run2/bf.cfg 0 3 (the last parameter determines how many pixels away from the central pixel are plotted).
+      \item Expected plot run time: a few seconds.
+      \item Plot output: The areas and shapes of the pixels surrounding the central pixel.
+
+    \end{enumerate}
+
+      \item Example3: data/run3/bf.cfg
+    \begin{enumerate}
+      \item Purpose: A simple 9x9 grid of pixels.  A Gaussian spot with a sigmax = sigmay of 10.0 microns (one pixel) is incident on the CCD and 1,000,000 electrons are tracked down to their final locations. The final location of the electrons is found in a self-consistent way and is not assumed as in runs 0-2.  Poisson's equation is re-solved after each 10,000 electrons.  The electron locations are saved after each step, the potential, charge, and E-field are saved after every 20 steps, and the pixel shapes are saved after 100 steps. This will generate about 8 GB of data.
       \item Syntax: src/Poisson data/run3/bf.cfg
-      \item Expected run time: $\rm \approx 30 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/run3/bf.cfg 0
-      \item Expected plot run time: $\rm <1 minute$.
-      \item Plot Syntax: python ChargeDistribution.py data/run3/bf.cfg 0
-      \item Expected plot run time: a few seconds.
-      \item Plot output: The assumed charge distribution of the collected electrons, as defined by the CollectedCharge*min(max) parameters in the .cfg file.
-      \item Plot Syntax: python VertexPlot.py data/run3/bf.cfg 0 1 (the last parameter determines how many pixels away from the central pixel are plotted).
-      \item Expected plot run time: a few seconds.
-      \item Plot output: The areas and shapes of the pixels surrounding the central pixel.
-
-    \end{enumerate}
-
-      \item Example4: data/run4/bf.cfg
-    \begin{enumerate}
-      \item Purpose: A simple 9x9 grid of pixels.  A Gaussian spot with a sigmax = sigmay of 10.0 microns (one pixel) is incident on the CCD and 1,000,000 electrons are tracked down to their final locations. The final location of the electrons is found in a self-consistent way and is not assumed as in runs 1-3.  Poisson's equation is re-solved after each 10,000 electrons.  The electron locations are saved after each step, the potential, charge, and E-field are saved after every 20 steps, and the pixel shapes are saved after 100 steps. This will generate about 8 GB of data.
-      \item Syntax: src/Poisson data/run4/bf.cfg
       \item Expected run time: $\rm \approx 5 hours$.
-      \item Plot Syntax: python Poisson\_Plots.py data/run4/bf.cfg x (x will determine which step is plotted)
-      \item Expected plot run time: $\rm <1 minute$.
-      \item Plot Syntax: python ChargeDistribution.py data/run4/bf.cfg x (x will determine which step is plotted)
+      \item Plot Syntax: python Poisson\_Plots.py data/run3/bf.cfg x (x will determine which step is plotted)
+      \item Expected plot run time: $\rm \approx 2 minute$.
+      \item Plot Syntax: python ChargeDistribution\_XYZ\_N.py data/run3/bf.cfg x 9(x will determine which step is plotted)
       \item Expected plot run time: a few seconds.
-      \item Plot output: The self-consistent charge distribution of the collected electrons.
-      \item Plot Syntax: python VertexPlot.py data/run4/bf.cfg x 1 (x will determine which step is plotted; the last parameter determines how many pixels away from the central pixel are plotted).
+      \item Plot output: The self-consistent charge distribution of the collected electrons, and the location of free holes..
+      \item Plot Syntax: python VertexPlot.py data/run3/bf.cfg x 3 (x will determine which step is plotted (0 or 100); the last parameter determines how many pixels away from the central pixel are plotted).
       \item Expected plot run time: a few seconds.
       \item Plot output: The areas and shapes of the pixels surrounding the central pixel.
 
     \end{enumerate}
 
-      \item Example 5: data/run5/bf.cfg
-    \begin{enumerate}
-      \item Purpose: A set of pixels near the top or bottom edge of the CCD.  The potentials outside the pixel region are defined from examination of the STA3800 layout.  
-      \item Syntax: src/Poisson data/run5/bf.cfg
-      \item Expected run time: $\rm \approx 20 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/run5/bf.cfg 0
-      \item Expected plot run time: $\rm \approx 15 minute$.
-      \item Plot output: The potentials, pixel shapes and electron paths near the top or bottom edge of the CCD. The large distortion near the CCD edge can be seen.
-    \end{enumerate}
+      \item Example 4-7:  These are identical to examples 0-3, except that these examples include free holes.  This increases the run time by about 20\%.  This code is still not as robust as I would like, so some variations of the channel stop depth and doping may cause it not to converge.  These examples should run fine, however.
 
-      \item Example 6: data/bfrun1/bf.cfg
+      \item Example 8: data/bfrun1/bf.cfg
     \begin{enumerate}
-      \item Purpose: A simple 9x9 grid of pixels.  A Gaussian spot with a sigmax = sigmay of 10.0 microns (one pixel) is incident on the CCD and 1,000,000 electrons are tracked down to their final locations. The final location of the electrons is found in a self-consistent way and is not assumed as in runs 1-3.  Poisson's equation is re-solved after each 10,000 electrons.  The electron locations are saved after each step, the potential, charge, and E-field are saved after every 10 steps, and the pixel shapes are saved after 80 steps. A total of 63 different spots are run (each in a directory data/bfrun\_x) with each spot having a random central location within the central pixel.  After the spots are run, the 63 spots are forward modeled to produce a plot of the X and Y size of the spot as a function of flux (a ``brighter-fatter'' plot). A 64th spot is run (in directory data/bfrun\_0) with 100,000 electrons self-consistently placed in the central pixel, and this is used to calculate the expected pixel-pixel correlations due to the brighter-fatter effect.  This run will generate $\rm \approx 900 GB$ of data.
-      \item Syntax: This may vary depending on the system you are running on.  The intent is to launch 64 copies(or however many you want) of the Run\_BF\_Multi.py code.  This code will run the 64 spots and processor rank 0 will then make the BF plot.  The file pythonmpi.sl is used to launch this job on NERSC Edison with the command:  sbatch pythonmpi.sl 
-      \item Expected run time: $\rm \approx 6 hours$ on NERSC Edison.
+      \item Purpose: A simple 9x9 grid of pixels.  A Gaussian spot with a sigmax = sigmay of 10.0 microns (one pixel) is incident on the CCD and 1,000,000 electrons are tracked down to their final locations. The final location of the electrons is found in a self-consistent way and is not assumed as in runs 1-3.  Poisson's equation is re-solved after each 10,000 electrons.  The electron locations are saved after each step, the potential, charge, and E-field are saved after every 10 steps, and the pixel shapes are saved after 80 steps. A total of 63 different spots are run (each in a directory data/bfrun\_x) with each spot having a random central location within the central pixel.  After the spots are run, the 63 spots are forward modeled to produce a plot of the X and Y size of the spot as a function of flux (a ``brighter-fatter'' plot). A 64th spot is run (in directory data/bfrun\_0) with 100,000 electrons self-consistently placed in the central pixel, and this is used to calculate the expected pixel-pixel correlations due to the brighter-fatter effect.  This run will generate $\rm \approx 250 GB$ of data.
+      \item Syntax: This may vary depending on the system you are running on.  The intent is to launch 64 copies(or however many you want) of the Run\_BF\_Multi.py code.  This code will run the 64 spots and processor rank 0 will then make the BF plot. Two control files for launching the MPI jobs, pythonmpi.sl(NERSC) and lage\_script.moab(LLNL) are included.  These will probably need modification, but should serve useful as starting points.
+      \item Expected run time: $\rm \approx 7 hours$ without free holes;  $\rm \approx 10 hours$ with free holes.
       \item Plot Syntax: The BF\_Sim\_101\_64.png plot is generated automatically by the Run\_BF\_Multi.py code
       \item Plot output: A plot of the brighter-fatter effect, showing the growth of the spots as the flux increases.
-      \item Plot Syntax: python AreaPlot.py data/bfrun1/bf.cfg 80
-      \item Plot output: A plot of the expected pixel-pixel correlations due to the brighter-fatter effect.
+      \item Plot Syntax: python AreaPlot\_Corr.py data/bfrun\_0/bf.cfg 80
+      \item Plot output: A plot of the expected pixel-pixel correlations (Area\_UnBiased\_Corr\_0\_80.pdf) due to the brighter-fatter effect.
     \end{enumerate}
+
+\section{Other Python Plotting Routines}
+
+I have included several other Python plotting routines, especially AreaTrend.py, VertexTrend.py, and PixelModel.py, which I have used to analyze the pixel area and vertex shifts.  These have not been run with the current code revision, and will almost certainly need some customization to run on your output, but I include them since they are probably useful as a starting point.
 
 
 
     
 \end{itemize}
-\section{Other Python Plotting Routines}
-
-I have included several other Python plotting routines, especially AreaTrend.py, VertexTrend.py, and PixelModel.py, which I have used to analyze the pixel area and vertex shifts.  These will almost certainly need some customization to run on your output, but I include them since they are probably useful as a starting point.
-
 \end{document}
 

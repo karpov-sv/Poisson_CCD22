@@ -11,9 +11,9 @@ import sys, time, subprocess,h5py
 from scipy.special import erf
 from scipy.optimize import fmin_powell
 from scipy import stats
-sys.path.append('/global/homes/c/cslage/Software/forward_model_varying_i')
+sys.path.append('/g/g17/lage1/Software/forward_model_varying_i')
 import forward
-from mpi4py import MPI
+import mpi
 
 #****************SUBROUTINES*****************
 
@@ -44,7 +44,7 @@ class Array2dSet:
 
 class Array3dHDF5Elec(object):
     def __init__(self, dir, filebase, n):
-        elecfile = dir+'/'+filebase+'_'+str(n)+'_Elec'
+        elecfile = dir+'/'+filebase+'_'+str(n)+'_Elec.hdf5'
         hdfelec = h5py.File(elecfile,'r')
         Dimension = hdfelec[hdfelec.items()[0][0]].attrs[u'Dimension']
         self.nx=Dimension[0]
@@ -148,9 +148,9 @@ def New_Cfg_File(incfgfile, outcfgfile, newrun):
     
     xoff = -5.0 + 10.0 * rand()
     yoff = -5.0 + 10.0 * rand()
-    lines[110] = 'Xoffset = '+str(xoff)+'\n'
-    lines[111] = 'Yoffset = '+str(yoff)+'\n'
-    lines[133] = 'outputfiledir 	= '+dirbase[0]+'run'+newrun+'\n'
+    lines[114] = 'Xoffset = '+str(xoff)+'\n'
+    lines[115] = 'Yoffset = '+str(yoff)+'\n'
+    lines[140] = 'outputfiledir 	= '+dirbase[0]+'run'+newrun+'\n'
     newcfgfile = open(outcfgfile, 'w')
     for line in lines:
         newcfgfile.write(line)
@@ -175,7 +175,6 @@ def OpenFile(filename):
 
     return lines
 
-
 def FillSpotlist(run, Numspots):
     global spotlist
     # Note sigmas and offset are in pixels, not microns.
@@ -188,18 +187,22 @@ def FillSpotlist(run, Numspots):
     outputfiledir = InConfigData['outputfiledir']
     outputfilebase = InConfigData['outputfilebase']
     GridsPerPixel = InConfigData['GridsPerPixel'] * InConfigData['ScaleFactor']
+    PixelSize = InConfigData['PixelSize']
+    ChannelStopWidth = InConfigData['ChannelStopWidth']
+    cspixels = int(ChannelStopWidth / PixelSize * float(GridsPerPixel / 2)) + 1
     stampxmin = -(int(nx/2)+0.5)
     stampxmax = -stampxmin
     stampymin = -(int(ny/2)+0.5)
     stampymax = -stampymin
 
-    spotlist = Array2dSet(stampxmin,stampxmax,nx,stampymin,stampymax,ny,Numspots)
+    spotlist = Array2dSet(stampxmin,stampxmax,nx,stampymin,stampymax,ny,Numspots-1)
 
     dirbase = outputfiledir.split('bfrun')
     
-    for spot in range(1,Numspots): # Don't include run 0 because it's different
-        dat = Array3dHDF5Elec(dirbase[0]+'bfrun_%d'%spot, outputfilebase, run)
-        cfgfile = dirbase[0]+'bfrun_%d'%spot+'/bf.cfg'
+    for spot in range(Numspots-1): 
+        spotrun = spot + 1 # Don't include run 0 because it's different
+        dat = Array3dHDF5Elec(dirbase[0]+'bfrun_%d'%spotrun, outputfilebase, run)
+        cfgfile = dirbase[0]+'bfrun_%d'%spotrun+'/bf.cfg'
         ConfigData = ReadConfigFile(cfgfile)
 
         spotlist.xoffset[spot] = ConfigData['Xoffset'] / ConfigData['PixelSize']
@@ -211,7 +214,7 @@ def FillSpotlist(run, Numspots):
             for j in range(ny):
                 nymin = ((ConfigData['PixelBoundaryLowerLeft'][1] - dat.ymin) / dat.dy) + GridsPerPixel * j
                 nymax = nymin + GridsPerPixel
-                electrons_in_pixel = dat.elec[nxmin:nxmax,nymin:nymax,:].sum()
+                electrons_in_pixel = dat.elec[(nxmin+cspixels):(nxmax-cspixels),nymin:nymax,:].sum()
                 #print "i = %d, j = %d, nxmin = %d, nymin = %d, electron = %d"%(i,j,nxmin,nymin,electrons_in_pixel)
                 spotlist.data[i,j,spot] = electrons_in_pixel
 
@@ -224,9 +227,8 @@ def FillSpotlist(run, Numspots):
 
     spotdata = [run, Result[0], Result[1], imax * ADU_correction]
     print spotdata
-    comm.send(spotdata, dest = (Numspots - 1), tag = run)
+    mpi.send(spotdata, Numspots - 1, tag = run)
     return
-
 
 def PlotSpotlist(Numruns, Numspots, imaxs, sigmaxs, sigmayx):
     global spotlist
@@ -235,25 +237,26 @@ def PlotSpotlist(Numruns, Numspots, imaxs, sigmaxs, sigmayx):
     # Postage Stamp size
     nx = InConfigData['PixelBoundaryNx']
     ny = InConfigData['PixelBoundaryNy']
+    file = open("bf.txt","w")
     figure()
     title("Baseline - Sigmax = Sigmay = 1.0, Offsets=random, With Diffusion")
     scatter(imaxs, sigmaxs, color = 'green', lw = 2, label = 'Sigma-x')
     scatter(imaxs, sigmays, color = 'red', lw = 2, label = 'Sigma-y')
  
-    slope, intercept, r_value, p_value, std_err = stats.linregress(imaxs[2:7],sigmaxs[2:7])
+    slope, intercept, r_value, p_value, std_err = stats.linregress(imaxs[4:9],sigmaxs[4:9])
     xplot=linspace(0.0,150000.0,100)
     yplot = slope * xplot + intercept
     plot(xplot, yplot, color='blue', lw = 2, ls = '--')
     tslope = slope * 100.0 * 50000.0
     text(10000.0,0.98,"X Slope = %.2f %% per 50K e-, Intercept = %.3f"%(tslope,intercept))
-
-    slope, intercept, r_value, p_value, std_err = stats.linregress(imaxs[2:7],sigmays[2:7])
+    file.write("X Slope = %.2f %% per 50K e-, Intercept = %.3f\n"%(tslope,intercept))
+    slope, intercept, r_value, p_value, std_err = stats.linregress(imaxs[4:9],sigmays[4:9])
     xplot=linspace(0.0,150000.0,100)
     yplot = slope * xplot + intercept
     plot(xplot, yplot, color='black', lw = 2, ls = '--')
     tslope = slope * 100.0 * 50000.0
     text(10000.0,0.97,"Y Slope = %.2f %% per 50K e-, Intercept = %.3f"%(tslope,intercept))
- 
+    file.write("Y Slope = %.2f %% per 50K e-, Intercept = %.3f\n"%(tslope,intercept))
     text(10000.0,0.99,"%d Simulated spots"%Numspots)
     xlabel('Central Peak(electrons)')
     ylabel('Sigma (Pixels)')
@@ -263,6 +266,7 @@ def PlotSpotlist(Numruns, Numspots, imaxs, sigmaxs, sigmayx):
     xticks([0.0,50000,100000])
 
     savefig(datadir+startdir+"plots/BF_Sim_%d_%d.png"%(Numruns,Numspots))
+    file.close()
     return
 
 #****************MAIN PROGRAM*****************
@@ -270,11 +274,10 @@ global spotlist
 datadir = 'data/'
 startdir = 'bfrun1/'
 
-comm = MPI.COMM_WORLD
-rank = comm.Get_rank()
-Numspots = comm.Get_size()
+rank = mpi.rank
+Numspots = mpi.size
 
-comm.Barrier() # Wait until everybody gets here
+mpi.barrier() # Wait until everybody gets here
 
 runname = '_%d'%rank
 nextdir = datadir+'bfrun'+runname+'/'
@@ -284,24 +287,26 @@ incfgfile = datadir+startdir+'bf.cfg'
 outcfgfile = nextdir+'bf.cfg'
 ConfigData = ReadConfigFile(incfgfile)
 Numruns = ConfigData['NumSteps']
-SaveData = ConfigData['SaveData']
+SaveElec = ConfigData['SaveElec']
 
 New_Cfg_File(incfgfile, outcfgfile, runname)
 
 if rank == 0:  # Use run0 for the area shift with all of the charge in the central pixel.
     newdir = subprocess.Popen('cp data/bfrun1/bf0.cfg '+nextdir+'bf.cfg', shell=True) 
     subprocess.Popen.wait(newdir)
+    newdir = subprocess.Popen('mkdir data/bfrun_0/plots', shell=True) 
+    subprocess.Popen.wait(newdir)
 
 
-cmd = '~/Software/Poisson_CCD22/src/Poisson '+outcfgfile
+cmd = '~/Software/Poisson_CCD_Hole10/src/Poisson '+outcfgfile
 cpp_job = subprocess.Popen(cmd, shell=True)
 subprocess.Popen.wait(cpp_job)
 time.sleep(1.0)
 
-comm.Barrier() # Wait until everybody gets here
+mpi.barrier() # Wait until everybody gets here
 
 
-NumPts = Numruns/SaveData
+NumPts = Numruns/SaveElec
 
 if rank == Numspots - 1: # Use the last processor to gather the data and plot it
     imaxs = zeros([NumPts])
@@ -309,9 +314,9 @@ if rank == Numspots - 1: # Use the last processor to gather the data and plot it
     sigmays = zeros([NumPts])
 
     for point in range(NumPts):
-        run = point * SaveData
+        run = point * SaveElec
         src = run % (Numspots - 1)
-        spotdata = comm.recv(source=src, tag = run)
+        spotdata, status = mpi.recv(src, tag = run)
         if run != spotdata[0]:
             print "Communication error! Run = %d, tag = %d"%(run, spotdata[0])
             continue
@@ -325,8 +330,13 @@ if rank == Numspots - 1: # Use the last processor to gather the data and plot it
 
 else:                    # Everybody else analyzes one or more runs with all of the spots.
     for point in range(NumPts):
-        run = point * SaveData
+        run = point * SaveElec
         if run % (Numspots - 1) == rank:
             FillSpotlist(run, Numspots)
 
+if rank == 0:  # Use run0 to plot the area plots and charge distribution
+    areaplot = subprocess.Popen('python AreaPlot_Corr.py data/bfrun_0/bf.cfg 80', shell=True) 
+    subprocess.Popen.wait(areaplot)
+    chargeplot = subprocess.Popen('python ChargeDistribution_XYZDist_N.py data/bfrun_0/bf.cfg 100 3', shell=True) 
+    subprocess.Popen.wait(chargeplot)
 

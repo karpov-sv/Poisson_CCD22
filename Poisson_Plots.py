@@ -1,51 +1,51 @@
 #!/usr/bin/env python
 
-#Author: Craig Lage, NYU; 
-#Date: 26-Jan-15
+#Author: Craig Lage, NYU;
+#Date: 10-Nov-16
 
 #This program plots the Poisson equation solutions from the C++ Poisson solver
 import matplotlib
 matplotlib.use("PDF")
 from pylab import *
-import sys, time, h5py
+import os, sys, time, h5py
 
 #****************SUBROUTINES*****************
 class Array3dHDF5(object):
     def __init__(self, dir, filebase, LogEField, run):
-        phifile = dir+'/'+filebase+'_'+str(run)+'_phi'
-        rhofile = dir+'/'+filebase+'_'+str(run)+'_rho'
+        phifile = dir+'/'+filebase+'_'+str(run)+'_phi' + '.hdf5'
+        rhofile = dir+'/'+filebase+'_'+str(run)+'_rho' + '.hdf5'
+        xfile = dir+'/'+'grid_x.dat'
+        yfile = dir+'/'+'grid_y.dat'
+        zfile = dir+'/'+'grid_z.dat'        
+
+        xgrid = loadtxt(xfile, skiprows=1)
+        ygrid = loadtxt(yfile, skiprows=1)
+        zgrid = loadtxt(zfile, skiprows=1)        
+
+        self.nx=xgrid.shape[0]
+        self.ny=ygrid.shape[0]
+        self.nz=zgrid.shape[0]
+
+        self.xmin=xgrid[0,1]
+        self.ymin=ygrid[0,1]
+        self.zmin=zgrid[0,1]
+
+        self.xmax=xgrid[self.nx-1,3]
+        self.ymax=ygrid[self.ny-1,3]
+        self.zmax=zgrid[self.nz-1,3]
+
+        self.x=xgrid[:,2]
+        self.y=ygrid[:,2]
+        self.z=zgrid[:,2]
+
         hdfphi = h5py.File(phifile,'r')
-        Dimension = hdfphi[hdfphi.items()[0][0]].attrs[u'Dimension']
-        self.nx=Dimension[0]
-        self.ny=Dimension[1]
-        self.nz=Dimension[2]
-        
-        Lower_Left = hdfphi[hdfphi.items()[0][0]].attrs[u'Lower_Left']
-        self.xmin=Lower_Left[0]
-        self.ymin=Lower_Left[1]
-        self.zmin=Lower_Left[2]
-
-        Upper_Right = hdfphi[hdfphi.items()[0][0]].attrs[u'Upper_Right']
-        self.xmax=Upper_Right[0]
-        self.ymax=Upper_Right[1]
-        self.zmax=Upper_Right[2]
-        
-        self.dx=(self.xmax-self.xmin)/self.nx
-        self.dy=(self.ymax-self.ymin)/self.ny
-        self.dz=(self.zmax-self.zmin)/self.nz
-        self.volume = self.dx * self.dy * self.dz
-        
-        self.x=linspace(self.xmin+self.dx/2,self.xmax-self.dx/2,self.nx)
-        self.y=linspace(self.ymin+self.dy/2,self.ymax-self.dy/2,self.ny)
-        self.z=linspace(self.zmin+self.dz/2,self.zmax-self.dz/2,self.nz)
-
         self.phi=array(hdfphi[hdfphi.items()[0][0]])
         hdfrho = h5py.File(rhofile,'r')
         self.rho=array(hdfrho[hdfrho.items()[0][0]])
         if LogEField == 1:
-            Exfile = dir+'/'+filebase+'_'+str(run)+'_Ex'
-            Eyfile = dir+'/'+filebase+'_'+str(run)+'_Ey'
-            Ezfile = dir+'/'+filebase+'_'+str(run)+'_Ez'
+            Exfile = dir+'/'+filebase+'_'+str(run)+'_Ex' + '.hdf5'
+            Eyfile = dir+'/'+filebase+'_'+str(run)+'_Ey' + '.hdf5'
+            Ezfile = dir+'/'+filebase+'_'+str(run)+'_Ez' + '.hdf5'
             hdfEx = h5py.File(Exfile,'r')
             self.Ex=array(hdfEx[hdfEx.items()[0][0]])
             hdfEy = h5py.File(Eyfile,'r')
@@ -54,12 +54,18 @@ class Array3dHDF5(object):
             self.Ez=array(hdfEz[hdfEz.items()[0][0]])
 
 def ReadConfigFile(filename):
-    # This reads the config file for the necessary settings
+    # This reads the Poisson simulator config file for
+    # the settings that were run
     # and returns a dictionary with the values
-    file = open(filename,'r')
-    lines=file.readlines()
-    file.close()
     ConfigData = {}
+    try:
+        file = open(filename,'r')
+        lines=file.readlines()
+        file.close()
+    except IOError:
+        print "Configuration file %s not found"%filename
+        return False, ConfigData 
+
     try:
         for line in lines:
             ThisLine=line.strip().split()
@@ -84,12 +90,13 @@ def ReadConfigFile(filename):
                     ThisParam = ThisLine[0]
                     try: ConfigData[ParamName] = int(ThisParam)
                     except ValueError:
-                        try: ConfigData[ParamName] = float(ThisParam)
+                        try:
+                            ConfigData[ParamName] = float(ThisParam)
                         except ValueError:
                             try:
                                 ConfigData[ParamName] = ThisParam
                             except ValueError:
-                                print "Error reading .cfg file"
+                                return False, ConfigData 
                 else:
                     ThisParam = []
                     for item in ThisLine:
@@ -99,26 +106,30 @@ def ReadConfigFile(filename):
                             except ValueError:
                                 ThisParam.append(item)
                     ConfigData[ParamName] = ThisParam
-            except:
+            except (IOError, ValueError):
                 continue
-    except:
-        print "Error reading .cfg file"
+    except Exception as e:
+        print "Error reading configuration file %s. Exception of type %s and args = \n"%(filename,type(e).__name__), e.args 
+        return False, ConfigData 
 
-    return ConfigData
+    return True, ConfigData
 
 #****************MAIN PROGRAM*****************
 
 # First, read the .cfg file
 
 configfile = sys.argv[1]
-run = sys.argv[2]
-ConfigData = ReadConfigFile(configfile)
+run = int(sys.argv[2])
+cfg_success, ConfigData = ReadConfigFile(configfile)
+if not cfg_success:
+    print "Configuration file issue. Quitting"
+    sys.exit()
 outputfilebase = ConfigData["outputfilebase"]
 outputfiledir = ConfigData["outputfiledir"]
 
-dat = Array3dHDF5(outputfiledir, outputfilebase, ConfigData["LogEField"], run) 
-
 # This holds all of the data
+dat = Array3dHDF5(outputfiledir, outputfilebase, ConfigData["LogEField"], run)
+
 ScaleFactor = ConfigData["ScaleFactor"]
 GridsPerPixel = ConfigData["GridsPerPixel"]
 nxx = dat.nx - 1
@@ -149,7 +160,11 @@ nxmin = nxcenter - (NumPixelsPlotted * ScaleFactor * GridsPerPixel)/2
 nxmax = nxcenter + (NumPixelsPlotted * ScaleFactor * GridsPerPixel)/2
 
 nzmin = 0
-nzmax = 8 * ScaleFactor
+nzmax = 16 * ScaleFactor
+
+# Create the output directory if it doesn't exist
+if not os.path.isdir(outputfiledir+"/plots"):
+    os.mkdir(outputfiledir+"/plots")
 
 rcParams['contour.negative_linestyle'] = 'solid'
 rcParams.update({'font.size': 6})
@@ -159,16 +174,20 @@ figure()
 suptitle("Array Edge Potentials. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
 subplot(2,2,1)
 title("Front Edge")
-ylim(-20.0, 10.0)
+ylim(-20.0, 20.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.x[:],dat.phi[:,0,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.x[:],dat.phi[:,0,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$x$ [um]')
+plt.ylabel('$\phi(x,y_F,z_0)$ [V]')
 legend()
 
 subplot(2,2,2)
 title("Back Edge")
-ylim(-20.0, 10.0)
+ylim(-20.0, 20.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.x[:],dat.phi[:,dat.ny-1,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.x[:],dat.phi[:,dat.ny-1,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$x$ [um]')
+plt.ylabel('$\phi(x,y_B,z_0)$ [V]')
 legend()
 
 subplot(2,2,3)
@@ -176,9 +195,11 @@ title("Left Edge")
 if EdgePlot:
     ylim(-75.0, 25.0)
 else:
-    ylim(-20.0, 10.0)
+    ylim(-20.0, 20.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.y[:],dat.phi[0,:,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.y[:],dat.phi[0,:,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$y$ [um]')
+plt.ylabel('$\phi(x_L,y,z_0)$ [V]')
 legend()
 
 subplot(2,2,4)
@@ -186,12 +207,14 @@ title("Right Edge")
 if EdgePlot:
     ylim(-75.0, 25.0)
 else:
-    ylim(-20.0, 10.0)
+    ylim(-20.0, 20.0)
 for slicez in [0,1,2,3,10]:
-    plot(dat.y[:],dat.phi[dat.nx-1,:,slicez], label = 'z=%.1f'%dat.z[slicez])
+    plot(dat.y[:],dat.phi[dat.nx-1,:,slicez], label = '$z_0=%.1f$'%dat.z[slicez])
+plt.xlabel('$y$ [um]')
+plt.ylabel('$\phi(x_R,y,z_0)$ [V]')
 legend()
 
-savefig(outputfiledir+"/plots/"+outputfilebase+"_Edge_Potentials.pdf")
+savefig(outputfiledir+"/plots/"+outputfilebase+"_Edge_Potentials_%d.pdf"%run)
 
 print "Making 1D potential and Charge Density plots\n"
 figure()
@@ -199,18 +222,19 @@ figure()
 suptitle("1D Potential and Charge Density Slices. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
 plotcounter = 1
 subplots_adjust(hspace=0.3, wspace=0.3)
-numzs = 20
-deltaz = dat.dz / 2.0 - 0.01
+phinumzs = 100
+numzs = 100
 
 subplot(2,3,1)
 title("Phi-Collect Gate")
-plot(dat.z[0:20],(dat.phi[nxcenter2,nycenter2,0:20]+dat.phi[nxcenter2-1,nycenter2,0:20]+dat.phi[nxcenter2,nycenter2-1,0:20]+dat.phi[nxcenter2-1,nycenter2-1,0:20])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter2]+dat.x[nxcenter2-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter2,nycenter2,0:phinumzs]+dat.phi[nxcenter2-1,nycenter2,0:phinumzs]+dat.phi[nxcenter2,nycenter2-1,0:phinumzs]+dat.phi[nxcenter2-1,nycenter2-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter2]+dat.x[nxcenter2-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 
 nxcenter3 = nxcenter2 + 4 * GridsPerPixel*ScaleFactor
 
-plot(dat.z[0:20],(dat.phi[nxcenter3,nycenter2,0:20]+dat.phi[nxcenter3-1,nycenter2,0:20]+dat.phi[nxcenter3,nycenter2-1,0:20]+dat.phi[nxcenter3-1,nycenter2-1,0:20])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter2,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2,0:phinumzs]+dat.phi[nxcenter3,nycenter2-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]')
 ylim(-10.0, 15.0)
 xlim(0.0,4.0)
 
@@ -218,68 +242,164 @@ subplot(2,3,4)
 title("Rho-Collect Gate")
 zs = []
 rhos = []
-for i in range(numzs):
+for i in range(1,numzs):
     for m in [-1,0,1]:
-        zs.append(dat.z[i] + m * deltaz)
+        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
         rhos.append((dat.rho[nxcenter2,nycenter2,i]+dat.rho[nxcenter2-1,nycenter2,i]+dat.rho[nxcenter2,nycenter2-1,i]+dat.rho[nxcenter2-1,nycenter2-1,i])/4.0)
 
 plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter2]+dat.x[nxcenter2-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 
 zs = []
 rhos = []
-for i in range(numzs):
+for i in range(1,numzs):
     for m in [-1,0,1]:
-        zs.append(dat.z[i] + m * deltaz)
+        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
         rhos.append((dat.rho[nxcenter3,nycenter2,i]+dat.rho[nxcenter3-1,nycenter2,i]+dat.rho[nxcenter3,nycenter2-1,i]+dat.rho[nxcenter3-1,nycenter2-1,i])/4.0)
 
 plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
 ylim(-60.0, 40.0)
 xlim(0.0,4.0)
 nxcenter3 = nxcenter2 + 3 * GridsPerPixel * ScaleFactor / 2
 nycenter3 = nycenter2
+nycenter4 = nycenter2 + GridsPerPixel * ScaleFactor / 2
 subplot(2,3,2)
-title("Phi-ChanStop, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
-plot(dat.z[0:20],(dat.phi[nxcenter3,nycenter3,0:20]+dat.phi[nxcenter3-1,nycenter3,0:20]+dat.phi[nxcenter3,nycenter3-1,0:20]+dat.phi[nxcenter3-1,nycenter3-1,0:20])/4.0)
+title("Phi-ChanStop")
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3,0:phinumzs]+dat.phi[nxcenter3,nycenter3-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter3]+dat.y[nycenter3-1])/2.0))
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter4,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4,0:phinumzs]+dat.phi[nxcenter3,nycenter4-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter4]+dat.y[nycenter4-1])/2.0))
+legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]')
 ylim(-20.0, 15.0)
-xlim(0.0,4.0)
+xlim(0.0,10.0)
 subplot(2,3,5)
-title("Rho-ChanStop, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
+title("Rho-ChanStop")
 zs = []
 rhos = []
-for i in range(numzs):
+for i in range(1,numzs):
     for m in [-1,0,1]:
-        zs.append(dat.z[i] + m * deltaz)
+        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
         rhos.append((dat.rho[nxcenter3,nycenter3,i]+dat.rho[nxcenter3-1,nycenter3,i]+dat.rho[nxcenter3,nycenter3-1,i]+dat.rho[nxcenter3-1,nycenter3-1,i])/4.0)
+plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter3]+dat.y[nycenter3-1])/2.0))
 
-plot(zs, rhos)
+zs = []
+rhos = []
+for i in range(1,numzs):
+    for m in [-1,0,1]:
+        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
+        rhos.append((dat.rho[nxcenter3,nycenter4,i]+dat.rho[nxcenter3-1,nycenter4,i]+dat.rho[nxcenter3,nycenter4-1,i]+dat.rho[nxcenter3-1,nycenter4-1,i])/4.0)
+
+plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter4]+dat.y[nycenter4-1])/2.0))
+
+legend(loc = "lower left")
 xlabel("Z-Dimension (microns)")
-ylim(-40.0, 40.0)
-xlim(0.0,4.0)
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
+ylim(-200.0, 200.0)
+xlim(0.0,10.0)
+
 nxcenter3 = nxcenter2
 nycenter3 = nycenter2 + GridsPerPixel * ScaleFactor / 2
 subplot(2,3,3)
 title("Phi-Barrier Gate, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
-plot(dat.z[0:20],(dat.phi[nxcenter3,nycenter3,0:20]+dat.phi[nxcenter3-1,nycenter3,0:20]+dat.phi[nxcenter3,nycenter3-1,0:20]+dat.phi[nxcenter3-1,nycenter3-1,0:20])/4.0)
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3,0:phinumzs]+dat.phi[nxcenter3,nycenter3-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3-1,0:phinumzs])/4.0)
 xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]')
 ylim(-20.0, 15.0)
 xlim(0.0,4.0)
 subplot(2,3,6)
 title("Rho-Barrier Gate, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
 zs = []
 rhos = []
-for i in range(numzs):
+for i in range(1,numzs):
     for m in [-1,0,1]:
-        zs.append(dat.z[i] + m * deltaz)
+        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
         rhos.append((dat.rho[nxcenter3,nycenter3,i]+dat.rho[nxcenter3-1,nycenter3,i]+dat.rho[nxcenter3,nycenter3-1,i]+dat.rho[nxcenter3-1,nycenter3-1,i])/4.0)
 
 plot(zs, rhos)
 xlabel("Z-Dimension (microns)")
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
 ylim(-40.0, 40.0)
 xlim(0.0,4.0)
-savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials.pdf")
+savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_%d.pdf"%run)
+
+print "Making 1D potential Plots #2 \n"
+figure()
+suptitle("1D Potentials in Storage Region. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
+subplots_adjust(hspace=0.3, wspace=0.3)
+slicez = 16 * ScaleFactor
+subplot(1,2,1, aspect = 1)
+title("Phi, z = %.2f"%dat.z[slicez])
+levels = linspace(-20.0, 20.0, 21)
+[yy,xx] = meshgrid(dat.y[nymin:nymax],dat.x[nxmin:nxmax])
+contour(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,lw=0.1)
+contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
+xlabel("X-Dimension (microns)")
+ylabel("Y-Dimension (microns)")
+plot([dat.x[nxmin+1],dat.x[nxmax-1]],[dat.y[nycenter2],dat.y[nycenter2]],ls = "-", color="k")
+plot([dat.x[nxcenter2],dat.x[nxcenter2]],[dat.y[nymin+1],dat.y[nymax-1]],ls = "-", color="k")
+colorbar(orientation='horizontal').set_label('$\phi(x,y,z)$ [V]')
+
+subplot(1,2,2)
+title("Phi-Collect Gate, z = %.2f"%dat.z[slicez])
+plot(dat.x[nxmin:nxmax],dat.phi[nxmin:nxmax, nycenter2, slicez], label = "XSlice, y = %.2f"%dat.y[nycenter2])
+plot(dat.y[nymin:nymax],dat.phi[nxcenter2,nymin:nymax, slicez], label = "YSlice, x = %.2f"%dat.x[nxcenter2])
+ylim(-10.0, 20.0)
+xlim(dat.x[nxmin],dat.x[nxmax])
+xlabel("X,Y-Dimension (microns)")
+ylabel("Potential(Volts)")
+legend()
+savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_2_%d.pdf"%run)
+
+print "Making 1D potential Plots #3 \n"
+slicezs = [4,8,12,14,16,18,20,24]
+figure()
+suptitle("1D Potentials in Storage Region. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
+subplots_adjust(hspace=0.3, wspace=0.3)
+
+for i,slicez in enumerate(slicezs):
+    subplot(2,4,i+1)
+    title("Phi, z = %.2f"%dat.z[slicez])
+    plot(dat.x[nxmin:nxmax],dat.phi[nxmin:nxmax, nycenter2, slicez], label = "XSlice, y = %.2f"%dat.y[nycenter2])
+    plot(dat.y[nymin:nymax],dat.phi[nxcenter2,nymin:nymax, slicez], label = "YSlice, x = %.2f"%dat.x[nxcenter2])
+    ylim(-10.0, 20.0)
+    xlim(dat.x[nxmin],dat.x[nxmax])
+    xlabel("X,Y-Dimension (microns)")
+    ylabel("Potential(Volts)")
+    legend()
+savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_3_%d.pdf"%run)
+
+print "Making 1D potential Plots #4 \n"
+figure()
+
+suptitle("1D Potentials in Isolation Regions. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
+subplots_adjust(hspace=0.3, wspace=0.3)
+slicez = 16 * ScaleFactor
+nxcenter3 = nxcenter2 + GridsPerPixel * ScaleFactor / 2
+nycenter3 = nycenter2 + GridsPerPixel * ScaleFactor / 2
+subplot(1,2,1, aspect = 1)
+title("Phi, z = %.2f"%dat.z[slicez])
+levels = linspace(-20.0, 20.0, 21)
+[yy,xx] = meshgrid(dat.y[nymin:nymax],dat.x[nxmin:nxmax])
+contour(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,lw=0.1)
+contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
+xlabel("X-Dimension (microns)")
+ylabel("Y-Dimension (microns)")
+plot([dat.x[nxmin+1],dat.x[nxmax-1]],[dat.y[nycenter3],dat.y[nycenter3]],ls = "-", color="k")
+plot([dat.x[nxcenter3],dat.x[nxcenter3]],[dat.y[nymin+1],dat.y[nymax-1]],ls = "-", color="k")
+#colorbar()
+
+subplot(1,2,2)
+title("Phi-Collect Gate, z = %.2f"%dat.z[slicez])
+plot(dat.x[nxmin:nxmax],dat.phi[nxmin:nxmax, nycenter3, slicez], label = "XSlice, y = %.2f"%dat.y[nycenter3])
+plot(dat.y[nymin:nymax],dat.phi[nxcenter3,nymin:nymax, slicez], label = "YSlice, x = %.2f"%dat.x[nxcenter3])
+ylim(-10.0, 10.0)
+xlim(dat.x[nxmin],dat.x[nxmax])
+xlabel("X,Y-Dimension (microns)")
+ylabel("Potential(Volts)")
+legend()
+savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_4_%d.pdf"%run)
 
 
 print "Making summary plots\n"
@@ -298,26 +418,25 @@ else:
     levels = linspace(-10.0, 10.0, 21)
 contour(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,lw=0.1)
 contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
-#imshow(dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,interpolation = 'None')
 xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 
 subplot(2,2,2, aspect = 1)
 nxmin2 = nxmin - 9 * GridsPerPixel * ScaleFactor / 2
 nymin2 = nymin - 9 * GridsPerPixel * ScaleFactor / 2
 rho0 = dat.rho[nxmin2,nymin2,slicez+1]
 
-title("Log Abs Rho, z = %.2f - %.2f"%(dat.z[nzmin],dat.z[nzmax]))
-levels = linspace(-1.0,1.0,21)
-plotarray = array(log10(abs(dat.rho[nxmin:nxmax,nymin:nymax,nzmin:nzmax].sum(axis=2)/(nzmax-nzmin))))
+title("Rho, z = %.2f - %.2f"%(dat.z[nzmin],dat.z[nzmax]))
+levels = linspace(-10.0,10.0,41)
+plotarray = array(dat.rho[nxmin:nxmax,nymin:nymax,nzmin:nzmax].sum(axis=2)/(nzmax-nzmin))
 contour(xx,yy,plotarray, levels, lw=0.1)
 contourf(xx,yy,plotarray, levels)
 xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
-colorbar()
+colorbar().set_label('$\\rho(x,y,z) / \epsilon_{Si}$ [V/um$^2$]')
 
-slicez = 1 * ScaleFactor
+slicez = 8 * ScaleFactor
 subplot(2,2,3, aspect = 1)
 title("Phi, z = %.2f"%dat.z[slicez])
 if EdgePlot:
@@ -330,27 +449,27 @@ xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
 plot([dat.x[nxmin+1],dat.x[nxmax-1]],[dat.y[nycenter2],dat.y[nycenter2]],ls = "-", color="k")
 plot([dat.x[nxcenter2],dat.x[nxcenter2]],[dat.y[nymin+1],dat.y[nymax-1]],ls = "-", color="k")
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 
-slicez = 4 * ScaleFactor
+slicez = 16 * ScaleFactor
 subplot(2,2,4, aspect = 1)
 title("Phi, z = %.2f"%dat.z[slicez])
 contour(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,lw=0.1)
 contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
 xlabel("X-Dimension (microns)")
 ylabel("Y-Dimension (microns)")
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 
-savefig(outputfiledir+"/plots/"+outputfilebase+"_Summary_1.pdf")
+savefig(outputfiledir+"/plots/"+outputfilebase+"_Summary_1_%d.pdf"%run)
 
 figure()
 suptitle("CCD Charge Collection. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
 subplots_adjust(hspace=0.3, wspace=0.3)
 
 if EdgePlot:
-    levels = linspace(-40.0, 10.0, 51)
+    levels = linspace(-40.0, 20.0, 61)
 else:
-    levels = linspace(-20.0, 10.0, 31)
+    levels = linspace(-20.0, 20.0, 41)
 
 subplot(1,2,1)
 title("Phi and (-)E in Gate Region. y = %.2f"%dat.y[nycenter2])
@@ -361,7 +480,7 @@ nzmax = 16 * ScaleFactor
 [zz,xx] = meshgrid(dat.z[nzmin:nzmax],dat.x[nxmin:nxmax])
 contour(xx,zz,dat.phi[nxmin:nxmax,nycenter2,nzmin:nzmax],levels,lw=0.1)
 contourf(xx,zz,dat.phi[nxmin:nxmax,nycenter2,nzmin:nzmax],levels)
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 if ConfigData["LogEField"] == 1 and PlotEField:
     nzmin = 1
     [zz,xx] = meshgrid(dat.z[nzmin:nzmax],dat.x[nxmin:nxmax])
@@ -379,7 +498,7 @@ nzmin = 0
 [zz,yy] = meshgrid(dat.z[nzmin:nzmax],dat.y[nymin:nymax])
 contour(yy,zz,dat.phi[nxcenter2,nymin:nymax,nzmin:nzmax],levels,lw=0.1)
 contourf(yy,zz,dat.phi[nxcenter2,nymin:nymax,nzmin:nzmax],levels)
-colorbar()
+colorbar().set_label('$\phi(x,y,z)$ [V]')
 if ConfigData["LogEField"] == 1 and PlotEField:
     nzmin = 1
     [zz,yy] = meshgrid(dat.z[nzmin:nzmax],dat.y[nymin:nymax])
@@ -389,162 +508,148 @@ nzmin = 0
 ylim(zz[0,0], zz[-1,-1])
 xlim(yy[0,0], yy[-1,-1])
 
-savefig(outputfiledir+"/plots/"+outputfilebase+"_Summary_2.pdf")
+savefig(outputfiledir+"/plots/"+outputfilebase+"_Summary_2_%d.pdf"%run)
 
-if ConfigData["LogPixels"] == 1:
-    # Next, plots of the pixel boundaries
-    print "Making pixel plots\n"
-    figure()
-    rcParams['contour.negative_linestyle'] = 'solid'
-    #rcParams.update({'font.size': 18})
+# Next, plots of the pixel boundaries
+print "Making pixel plots\n"
+figure()
+rcParams['contour.negative_linestyle'] = 'solid'
+#rcParams.update({'font.size': 18})
 
-    Channelkmax = int(ConfigData["ChannelDepth"] / (ConfigData["PixelSize"] / ConfigData["GridsPerPixel"]))
-    suptitle("CCD Pixel Plots. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 24)
-    plotcounter = 1
-    subplots_adjust(hspace=0.3, wspace=0.1)
+suptitle("CCD Pixel Plots. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 24)
+plotcounter = 1
+subplots_adjust(hspace=0.3, wspace=0.1)
 
-    filename = outputfiledir+"/"+outputfilebase+'_'+str(run)+"_Pts"
-    file = open(filename,"r")
-    lines = file.readlines()
-    file.close()
-    if len(lines) < 2:
-        print "No data in Pts file.  Quitting"
-        sys.exit()
-    redsx=[]
-    redsy=[]
-    blacksx=[]
-    blacksy=[]
-    plottedxin = -1000.0
-    plottedyin = -1000.0
-    lines.remove(lines[0])
-    for line in lines:
-        values = line.split()
-        zout = float(values[5])    
-        if zout > dat.z[Channelkmax + 3]:
-            continue # Skip these in case of LogTracePaths = 1
-        xin = float(values[0])
-        yin = float(values[1])
+filename = outputfiledir+"/"+outputfilebase+'_'+str(run)+"_Pts.dat"
+file = open(filename,"r")
+lines = file.readlines()
+file.close()
+if len(lines) < 2:
+    print "No data in Pts file.  Quitting"
+    sys.exit()
+redsx=[]
+redsy=[]
+blacksx=[]
+blacksy=[]
+plottedxin = -1000.0
+plottedyin = -1000.0
+lines.remove(lines[0])
+for line in lines:
+    values = line.split()
+    phase = int(values[2])
+    if phase == 0:
+        xin = float(values[3])
+        yin = float(values[4])
+    elif phase == 4:
         xout = float(values[3])
         yout = float(values[4])
         if isnan(xout) or isnan(yout):
+            print "xin = %.3f, yin = %.3f is a nan"
             continue
         pixxout = int(xout/10.0)
-        pixyout = int(yout/10.0)    
-
-        if (xin > plottedxin - .001) and (xin < plottedxin + .001) and \
-           (yin > plottedyin - .001) and (yin < plottedyin + .001):
-            continue # Skips it if it is already plotted
+        pixyout = int(yout/10.0)
         if (pixxout + pixyout) % 2 == 0:
             redsx.append(xin)
             redsy.append(yin)
         else:
             blacksx.append(xin)
             blacksy.append(yin)
-
-        plottedxin = xin
-        plottedyin = yin
-
-    subplot(1,1,1,aspect=1)
-    title("Pixel Boundaries",fontsize = 12)
-    if ConfigData["PixelBoundaryTestType"] == 0:
-        spotsize = 10.0 * ConfigData["PixelBoundaryStepSize"][0] * ConfigData["PixelBoundaryStepSize"][1]
+        continue
     else:
-        spotsize = 0.1
-    scatter(redsx,redsy,s=spotsize,color="red")
-    scatter(blacksx,blacksy,s=spotsize,color="black")
+        continue
 
-    if EdgePlot:
-        for linex in linspace(120.0,200.0,9):
-            plot((linex,linex),(20.0,70.0),linewidth=1.0, color='blue')
+subplot(1,1,1,aspect=1)
+title("Pixel Boundaries",fontsize = 12)
+if ConfigData["PixelBoundaryTestType"] == 0:
+    spotsize = 10.0 * ConfigData["PixelBoundaryStepSize"][0] * ConfigData["PixelBoundaryStepSize"][1]
+else:
+    spotsize = 0.1
+scatter(redsx,redsy,s=spotsize,color="red")
+scatter(blacksx,blacksy,s=spotsize,color="black")
 
-    xlabel("X(microns)",fontsize = 18)
-    ylabel("Y(microns)",fontsize = 18)
-    xlim(ConfigData["PixelBoundaryLowerLeft"][0], ConfigData["PixelBoundaryUpperRight"][0])
-    ylim(ConfigData["PixelBoundaryLowerLeft"][1], ConfigData["PixelBoundaryUpperRight"][1])
+if EdgePlot:
+    for linex in linspace(120.0,200.0,9):
+        plot((linex,linex),(20.0,70.0),linewidth=1.0, color='blue')
+
+xlabel("X(microns)",fontsize = 18)
+ylabel("Y(microns)",fontsize = 18)
+xlim(ConfigData["PixelBoundaryLowerLeft"][0], ConfigData["PixelBoundaryUpperRight"][0])
+ylim(ConfigData["PixelBoundaryLowerLeft"][1], ConfigData["PixelBoundaryUpperRight"][1])
 
 
-    savefig(outputfiledir+"/plots/"+outputfilebase+"_Pixels.pdf")
+savefig(outputfiledir+"/plots/"+outputfilebase+"_Pixels_%d.pdf"%run)
 
-if ConfigData["LogPixelPaths"] == 1 and ConfigData["LogPixels"] == 1:
+
+if ConfigData["LogPixelPaths"] != 0 and run % ConfigData["LogPixelPaths"] == 0:
     # Last, plots of the electron paths
     print "Making array electron path plots\n"
-
+    # Plotting the paths along a line through the center
     yline = (ConfigData["PixelBoundaryLowerLeft"][1] + ConfigData["PixelBoundaryUpperRight"][1] + ConfigData["PixelBoundaryStepSize"][1]) / 2.0
     xline = (ConfigData["PixelBoundaryLowerLeft"][0] + ConfigData["PixelBoundaryUpperRight"][0] + ConfigData["PixelBoundaryStepSize"][0]) / 2.0
 
-    figure()
     vertical_zoom = 1
+    figure()
     suptitle("Electron Path Plot - Vertical Zoom = %d"%vertical_zoom, fontsize = 24)
     subplots_adjust(wspace=0.2)
-    subplot(1,2,1,aspect=vertical_zoom)
-    oldxin = 1000000.0
-    lines.remove(lines[0])
+
     for line in lines:
         values = line.split()
-        xin = float(values[0])
-        yin = float(values[1])
-        xout = float(values[3])
-        yout = float(values[4])
-        zout = float(values[5])
-        if (yin < yline - .10) or (yin > yline + .10):
+        phase = int(values[2])
+        if phase == 0:
+            xin = float(values[3])
+            yin = float(values[4])
+            if (yin > yline - .10) and (yin < yline + .10):
+                YPlotThisID = True
+                xpaths=[]
+                zxpaths=[]
+            else:
+                YPlotThisID = False
+            if (xin > xline - .10) and (xin < xline + .10):
+                XPlotThisID = True
+                ypaths=[]
+                zypaths=[]
+            else:
+                XPlotThisID = False
             continue
+        if XPlotThisID or YPlotThisID:
+            xout = float(values[3])
+            yout = float(values[4])
+            zout = float(values[5])
+            if isnan(xout) or isnan(yout) or isnan(zout):
+                continue
+            if YPlotThisID:
+                xpaths.append(xout)
+                zxpaths.append(zout)
+                if phase == 4:
+                    pixxin = int(xin/10.0)
+                    if pixxin % 2 == 0:
+                        color = "red"
+                    else:
+                        color = "black"
+                    subplot(1,2,1,aspect=vertical_zoom)
+                    plot(xpaths, zxpaths, color = color, linewidth = 0.1)
 
+            if XPlotThisID:
+                ypaths.append(yout)
+                zypaths.append(zout)
+                if phase == 4:
+                    pixyin = int(yin/10.0)
+                    if pixyin % 2 == 0:
+                        color = "red"
+                    else:
+                        color = "black"
+                    subplot(1,2,2,aspect=vertical_zoom)                        
+                    plot(ypaths, zypaths, color = color, linewidth = 0.1)
 
-        if abs(xin - oldxin) > .001:
-            if oldxin < 100000.0:
-                pixxin = int(oldxin/10.0)
-                if pixxin % 2 == 0:
-                    color = "red"
-                else:
-                    color = "black"
-                plot(xpaths, zxpaths, color = color, linewidth = 0.1)
-            oldxin = xin
-            xpaths=[]
-            zxpaths=[]
-            
-        if isnan(xout) or isnan(yout) or isnan(zout):
-            continue
-        xpaths.append(xout)
-        zxpaths.append(zout)
-
+    subplot(1,2,1,aspect=vertical_zoom)
     ylabel("Z(microns)")
     xlabel("X (microns)")
     ylim(0.0,110.0)
     xlim(ConfigData["PixelBoundaryLowerLeft"][0], ConfigData["PixelBoundaryUpperRight"][0])
-
     subplot(1,2,2,aspect=vertical_zoom)
-    oldyin = 1000000.0
-    for line in lines:
-        values = line.split()
-        xin = float(values[0])
-        yin = float(values[1])
-        xout = float(values[3])
-        yout = float(values[4])
-        zout = float(values[5])
-
-        if (xin < xline - .10) or (xin > xline + .10):
-            continue
-
-        if abs(yin - oldyin) > .001:
-            if oldyin < 100000.0:
-                pixyin = int(oldyin/10.0)
-                if pixyin % 2 == 0:
-                    color = "red"
-                else:
-                    color = "black"
-
-                plot(ypaths, zypaths, color = color, linewidth = 0.1)
-            oldyin = yin
-            ypaths=[]
-            zypaths=[]
-            
-        if isnan(xout) or isnan(yout) or isnan(zout):
-            continue
-        ypaths.append(yout)
-        zypaths.append(zout)
-
     ylabel("Z(microns)")
     xlabel("Y (microns)")
     ylim(0.0,110.0)
     xlim(ConfigData["PixelBoundaryLowerLeft"][1], ConfigData["PixelBoundaryUpperRight"][1])
-    savefig(outputfiledir+"/plots/"+outputfilebase+"_Paths.pdf")
+    savefig(outputfiledir+"/plots/"+outputfilebase+"_Paths_%d.pdf"%run)
+

@@ -1,9 +1,9 @@
 /*
   ------------------------------------------------------------------------------
-  Author: Craig Lage, NYU CCPP
-  Date: Feb 14, 2014
+  Author: Craig Lage, UC Davis
+  Date: Sep 30, 2016
 
-  Triaxial halo generation program
+  Standalone cpp Poisson solver
 
 */
 
