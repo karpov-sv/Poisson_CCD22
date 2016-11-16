@@ -987,15 +987,15 @@ double MultiGrid::AdjustHoles(Array3D* phi, Array3D* rho, Array3D* hole)
 
   if (WorstV < 0.50 && fabs(AveV) < 0.05)
     {
-      ChargeIncrement = 40.0 * pow((double)Nz / (double)ScaleFactor / ((double)phi->nz - 1.0), 2.0);
+      ChargeIncrement = 20.0 * pow((double)Nz / (double)ScaleFactor / ((double)phi->nz - 1.0), 2.0);
     }
   else if (WorstV < 1.0 && fabs(AveV) < 0.10)
     {
-      ChargeIncrement = 20.0 * pow((double)Nz / (double)ScaleFactor / ((double)phi->nz - 1.0), 2.0);
+      ChargeIncrement = 10.0 * pow((double)Nz / (double)ScaleFactor / ((double)phi->nz - 1.0), 2.0);
     }
   else
     {
-      ChargeIncrement = 10.0 * pow((double)Nz / (double)ScaleFactor / ((double)phi->nz - 1.0), 2.0);
+      ChargeIncrement = 5.0 * pow((double)Nz / (double)ScaleFactor / ((double)phi->nz - 1.0), 2.0);
     }
   
   for (n=0; n<NumberofPixelRegions; n++)
