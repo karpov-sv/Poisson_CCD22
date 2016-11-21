@@ -46,12 +46,13 @@ class MultiGrid
   int ScaleFactor;       // Power of 2 that sets the grid size
   // ScaleFactor = 1 means grid size is 1.0 micron, 96 grids in the z-direction
   double PixelSize;      // Pixel size in microns
+  double SensorThickness; // Thickness of the sensor in microns
   int GridsPerPixel;     // Number of grids per pixel at ScaleFactor = 1
   double GridSpacing;    // Grid size in microns
   int Nx;                // Number of grids in x at ScaleFactor = 1
   int Ny;                // Number of grids in y at ScaleFactor = 1
   int Nz;                // Number of grids in z at ScaleFactor = 1
-  int Nzelec;                // Number of grids in z in electron arrays at ScaleFactor = 1
+  int Nzelec;            // Number of grids in z in electron arrays at ScaleFactor = 1
   double Xmin;
   double Xmax;
   double Ymin;

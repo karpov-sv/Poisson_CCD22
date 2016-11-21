@@ -211,6 +211,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
   ScaleFactor =  GetIntParam(inname, "ScaleFactor", 1);     // Power of 2 that sets the grid size
   // ScaleFactor = 1 means grid size is 5/6 micron, 128 grids in the z-direction
   PixelSize = GetDoubleParam(inname, "PixelSize", 10.0);    // Pixel size in microns
+  SensorThickness = GetDoubleParam(inname, "SensorThickness", 100.0);    // Sensor Thickness in microns  
   GridsPerPixel = GetIntParam(inname, "GridsPerPixel", 12); // Grids per pixel at ScaleFactor = 1
   GridsPerPixel = GridsPerPixel * ScaleFactor;
   GridSpacing = PixelSize / (double)GridsPerPixel;
@@ -219,9 +220,9 @@ void MultiGrid::ReadConfigurationFile(string inname)
   Nx = Nx * ScaleFactor;
   Ny = GetIntParam(inname, "Ny", 160);                // Number of grids in y at ScaleFactor = 1
   Ny = Ny * ScaleFactor;
-  Nz = 160;                                           // Number of grids in z at ScaleFactor = 1
+  Nz = GetIntParam(inname, "Nz", 160);                // Number of grids in z at ScaleFactor = 1
   Nz = Nz * ScaleFactor;
-  Nzelec = 32;                                        // Number of grids in z in electron array at ScaleFactor = 1
+  Nzelec = GetIntParam(inname, "Nzelec", 32);                // Number of grids in z in electron and hole grids at ScaleFactor = 1
   Nzelec = Nzelec * ScaleFactor;
   XBCType = GetIntParam(inname, "XBCType", 1);        // 0 - Free BC, 1 - Periodic BC
   YBCType = GetIntParam(inname, "YBCType", 1);        // 0 - Free BC, 1 - Periodic BC
@@ -442,12 +443,12 @@ void MultiGrid::BuildArrays(Array3D** phi, Array3D** rho, Array3D** elec, Array3
   Zmin = 0.0;
   Xmax = dx * (double)nxx + Xmin;
   Ymax = dy * (double)nyy + Ymin;
-  Zmax = 100.0;
-  phi[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,Zmax,nzz,NZExp,GateOxide);
-  rho[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,Zmax,nzz,NZExp,GateOxide);
+  Zmax = SensorThickness;
+  phi[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,Zmax,nzz,NZExp,GateOxide,SensorThickness);
+  rho[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,Zmax,nzz,NZExp,GateOxide,SensorThickness);
   zmaxelec = rho[0]->Z(rho[0]->zp[Nzelec] + rho[0]->dzp / 2.0, 0.0);
-  elec[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,zmaxelec,Nzelec,NZExp,GateOxide);
-  hole[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,zmaxelec,Nzelec,NZExp,GateOxide);
+  elec[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,zmaxelec,Nzelec,NZExp,GateOxide,SensorThickness);
+  hole[0] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,zmaxelec,Nzelec,NZExp,GateOxide,SensorThickness);
   BCType[0] = new Array2D(Xmin,Xmax,nxx,Ymin,Ymax,nyy);
 
   for (n=1; n<nsteps+1; n++)
@@ -464,13 +465,13 @@ void MultiGrid::BuildArrays(Array3D** phi, Array3D** rho, Array3D** elec, Array3
       xmax = phi[0]->xmax - phi[0]->dx / 2.0 + dx / 2.0;
       ymax = phi[0]->ymax - phi[0]->dy / 2.0 + dy / 2.0;
       zmax = phi[0]->zmax - phi[0]->dzp / 2.0 + dz / 2.0;
-      phi[n] = new Array3D(xmin,xmax,nx,ymin,ymax,ny,zmin,zmax,nz,NZExp,GateOxide);
-      rho[n] = new Array3D(xmin,xmax,nx,ymin,ymax,ny,zmin,zmax,nz,NZExp,GateOxide);
+      phi[n] = new Array3D(xmin,xmax,nx,ymin,ymax,ny,zmin,zmax,nz,NZExp,GateOxide,SensorThickness);
+      rho[n] = new Array3D(xmin,xmax,nx,ymin,ymax,ny,zmin,zmax,nz,NZExp,GateOxide,SensorThickness);
       BCType[n] = new Array2D(xmin,xmax,nx,ymin,ymax,ny);
     }
   for (n=0; n<3; n++)
     {
-      E[n] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,Zmax,nzz,NZExp,GateOxide);
+      E[n] = new Array3D(Xmin,Xmax,nxx,Ymin,Ymax,nyy,Zmin,Zmax,nzz,NZExp,GateOxide,SensorThickness);
     }
   return;
 }
@@ -1636,8 +1637,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 double MultiGrid::GetElectronInitialZ() {
     if(FilterIndex >= 0 && FilterIndex < n_band) {
         int cdf_index = (int)floor(n_filter_cdf * drand48());
-        // The sensor thickness is hardcoded here, as in many other places :-(
-        return 100.0 - filter_cdf[FilterIndex * n_filter_cdf + cdf_index];
+        return SensorThickness - filter_cdf[FilterIndex * n_filter_cdf + cdf_index];
     }
     else {
         return ElectronZ0Fill;
@@ -2179,3 +2179,4 @@ void MultiGrid::FillRho(Array3D* rho, Array3D* elec, Array3D* hole)
   if(VerboseLevel > 1)  printf("Mobile charges added into rho.Total electrons=%.1f, Total holes=%.6g\n", TotalElectrons, TotalHoles);
   return;
 }
+

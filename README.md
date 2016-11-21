@@ -48,5 +48,7 @@ on a suggestion from David Kirkby, and makes the plotting much easier and more c
 chnages the format from what David had suggested in order to include the cell boundaries as well as
 the cell center.  This is needed to accomodate the non-linear Z-axis discussed above.
 
+(8) The thickness of the silicon, which was hard-coded to a value of 100 microns, is now controlled by a parameter called SensorThickness.
+
 Hopefully you find this useful.  Comments and questions are encouraged and should be addressed to: cslage@ucdavis.edu
 

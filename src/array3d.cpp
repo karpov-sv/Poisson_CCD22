@@ -8,19 +8,18 @@
 */
 
 //****************** array3d.cpp **************************
-
 #include "array3d.h"
 
-Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int Ny, double Zmin, double Zmax, int Nz, double NZExp, double GateOxide)
+Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int Ny, double Zmin, double Zmax, int Nz, double NZExp, double GateOxide, double SensorThickness)
 {
   int i, j, k;
   nx = Nx; ny = Ny; nz = Nz; 
   xmin = Xmin; xmax = Xmax; ymin = Ymin; ymax = Ymax; zmin = Zmin; zmax = Zmax;
   nzexp = NZExp;
+  sensorthickness = SensorThickness;
   dx = (xmax - xmin) / (double) nx;
   dy = (ymax - ymin) / (double) ny;
   dzp = (zmax - zmin) / (double) nz;
-  volume = dx * dy * dzp;
   x = new double[nx]; y = new double[ny]; z = new double[nz]; zp = new double[nz]; zplus = new double[nz]; zminus = new double[nz]; dzpdz = new double[nz]; zpz = new double[nz]; zmz = new double[nz], zw = new double[nz];
   data = new double[nx * ny * nz];
 
@@ -168,17 +167,17 @@ double Array3D::DataInterpolate3D(double xin, double yin, double zin)
 
 double Array3D::ZP(double z)
 {
-  return - 100.0 * (nzexp - 1.0) * pow(z / 100.0, (nzexp + 1.0)/nzexp) + nzexp * z;
+  return - sensorthickness * (nzexp - 1.0) * pow(z / sensorthickness, (nzexp + 1.0)/nzexp) + nzexp * z;
 }
 
 double Array3D::DZPDz(double z)
 {
-  return - (nzexp - 1.0) * (nzexp + 1.0) / nzexp * pow(z / 100.0, 1.0 / nzexp) + nzexp;
+  return - (nzexp - 1.0) * (nzexp + 1.0) / nzexp * pow(z / sensorthickness, 1.0 / nzexp) + nzexp;
 }
 
 double Array3D::D2ZPDz2(double z)
 {
-  return - (nzexp - 1.0) * (nzexp + 1.0) / (nzexp * nzexp) * pow(z / 100.0, 1.0 / nzexp - 1.0) / 100.0;
+  return - (nzexp - 1.0) * (nzexp + 1.0) / (nzexp * nzexp) * pow(z / sensorthickness, 1.0 / nzexp - 1.0) / sensorthickness;
 }
 
 double Array3D::Z(double zp, bool Gox_shift)

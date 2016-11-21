@@ -20,11 +20,11 @@ class Array3D //This packages the 3D data sets
 {
  public:
   int nx, ny, nz;
-  double xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dzp, nzexp, volume, *x, *y, *z, *zp, *zpz, *zmz, *zw, *zplus, *zminus, *dzpdz, *data;
+  double xmin, xmax, ymin, ymax, zmin, zmax, dx, dy, dzp, nzexp, sensorthickness, *x, *y, *z, *zp, *zpz, *zmz, *zw, *zplus, *zminus, *dzpdz, *data;
   double Gox_si, Delta_Z;
   int Channelkmin;
   Array3D() {};
-  Array3D(double, double, int, double, double, int, double, double, int, double, double);
+  Array3D(double, double, int, double, double, int, double, double, int, double, double, double);
   ~Array3D();
   double PyramidalKernel3D(double, double, double);
   double DataInterpolate3D(double, double, double);
