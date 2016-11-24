@@ -1,0 +1,12 @@
+This version of the forward modeling includes a constant sky background as a returned parameter.  It is much less well tested than other versions without the sky background.
+
+To build, run
+
+python setup.py build_ext --inplace
+
+This builds the .so library, which you will need to put someplace where Python can find it.
+
+You will likely need to edit the "include_dirs" list in the setup.py file so that the program can find the file:
+
+numpy/arrayobject.h
+
