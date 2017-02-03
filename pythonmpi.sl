@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH -p regular
 #SBATCH -N 2
-#SBATCH -t 06:00:00
+#SBATCH -t 16:00:00
 #SBATCH -J my_job
 
 module load python

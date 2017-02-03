@@ -4,8 +4,8 @@
 # 26-Feb-16
 #############################################################################
 
-BOOST_DIR     = /usr/local/Cellar/boost/1.58.0
-HDF5_DIR     = /usr/local/Cellar/hdf5/1.8.14
+BOOST_DIR     = /usr/local
+HDF5_DIR     = /usr/local
 
 ####### Compiler, tools and options
 
@@ -15,7 +15,7 @@ CFLAGS        = -pipe -O2 -Wall -W
 CXXFLAGS      = -pipe -O2 -Wall -W
 INCPATH       =  -I.  -I$(HDF5_DIR)/include -I$(BOOST_DIR)/include
 LINK          = g++
-LFLAGS        = -Wl
+LFLAGS        =
 LIBS          = -L$(BOOST_DIR)/lib -L$(HDF5_DIR)/lib -lm -lz -lhdf5 -lhdf5_cpp -lpthread
 
 ####### Output directory
@@ -31,15 +31,17 @@ SOURCES       = poisson.cpp \
 		array2d.cpp \
 		polygon.cpp \
 		fileio.cpp \
-		hdf5write.cpp 
+		hdf5write.cpp \
+		hdf5read.cpp
 OBJECTS       = poisson.o \
 		multigrid.o \
 		array3d.o \
 		array2d.o \
 		polygon.o \
 		fileio.o \
-		hdf5write.o
-DESTDIR       = 
+		hdf5write.o \
+		hdf5read.o
+DESTDIR       =
 TARGET        = Poisson
 
 first: all
@@ -66,7 +68,7 @@ first: all
 
 all: Makefile $(TARGET)
 
-$(TARGET):  $(OBJECTS)  
+$(TARGET):  $(OBJECTS)
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 
@@ -80,6 +82,7 @@ poisson.o: poisson.cpp poisson.h \
 		globals.h \
 		fileio.h \
 		hdf5write.h \
+		hdf5read.h \
 		array3d.h \
 		array2d.h \
 		polygon.h
@@ -89,6 +92,7 @@ multigrid.o: multigrid.cpp multigrid.h \
 		globals.h \
 		fileio.h \
 		hdf5write.h \
+		hdf5read.h \
 		array3d.h \
 		array2d.h \
 		polygon.h
@@ -112,4 +116,5 @@ fileio.o: fileio.cpp fileio.h
 hdf5write.o: hdf5write.cpp hdf5write.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hdf5write.o hdf5write.cpp
 
-
+hdf5read.o: hdf5read.cpp hdf5read.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o hdf5read.o hdf5read.cpp

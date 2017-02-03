@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#Author: Craig Lage, NYU; 
+#Author: Craig Lage, NYU;
 #Date: 16-Nov-15
 
 #This program plots the pixel area plots from the Poisson CCD solver
@@ -12,12 +12,18 @@ import sys, time, h5py
 #****************SUBROUTINES*****************
 
 def ReadConfigFile(filename):
-    # This reads the config file for the necessary settings
+    # This reads the Poisson simulator config file for
+    # the settings that were run
     # and returns a dictionary with the values
-    file = open(filename,'r')
-    lines=file.readlines()
-    file.close()
     ConfigData = {}
+    try:
+        file = open(filename,'r')
+        lines=file.readlines()
+        file.close()
+    except IOError:
+        print "Configuration file %s not found"%filename
+        return False, ConfigData 
+
     try:
         for line in lines:
             ThisLine=line.strip().split()
@@ -42,12 +48,13 @@ def ReadConfigFile(filename):
                     ThisParam = ThisLine[0]
                     try: ConfigData[ParamName] = int(ThisParam)
                     except ValueError:
-                        try: ConfigData[ParamName] = float(ThisParam)
+                        try:
+                            ConfigData[ParamName] = float(ThisParam)
                         except ValueError:
                             try:
                                 ConfigData[ParamName] = ThisParam
                             except ValueError:
-                                print "Error reading .cfg file"
+                                return False, ConfigData 
                 else:
                     ThisParam = []
                     for item in ThisLine:
@@ -57,12 +64,13 @@ def ReadConfigFile(filename):
                             except ValueError:
                                 ThisParam.append(item)
                     ConfigData[ParamName] = ThisParam
-            except:
+            except (IOError, ValueError):
                 continue
-    except:
-        print "Error reading .cfg file"
+    except Exception as e:
+        print "Error reading configuration file %s. Exception of type %s and args = \n"%(filename,type(e).__name__), e.args 
+        return False, ConfigData 
 
-    return ConfigData
+    return True, ConfigData
 
 def ReadAreaFile(filename, nx, ny):
     area = zeros([nx, ny])
@@ -77,10 +85,10 @@ def ReadAreaFile(filename, nx, ny):
         j = int(items[1])
         area[i,j] = float(items[2])
     return area
-                 
+
 def ReadVertexFile(filename, nx, ny, NumAngles):
     vx = zeros([nx, ny, NumAngles])
-    vy = zeros([nx, ny, NumAngles])    
+    vy = zeros([nx, ny, NumAngles])
     file = open(filename, 'r')
     lines = file.readlines()
     file.close()
@@ -102,14 +110,14 @@ def ReadVertexFile(filename, nx, ny, NumAngles):
             j = 0
             i += 1
             lastx = x
-            lasty = y            
+            lasty = y
 
         #print i,j,k
         vx[i,j,k] = float(items[3])
-        vy[i,j,k] = float(items[4])        
+        vy[i,j,k] = float(items[4])
         k += 1
     return (vx, vy)
-                 
+
 
 #****************MAIN PROGRAM*****************
 
@@ -117,7 +125,10 @@ def ReadVertexFile(filename, nx, ny, NumAngles):
 
 configfile = sys.argv[1]
 run = int(sys.argv[2])
-ConfigData = ReadConfigFile(configfile)
+cfg_success, ConfigData = ReadConfigFile(configfile)
+if not cfg_success:
+    print "Configuration file issue. Quitting"
+    sys.exit()
 outputfilebase = ConfigData["outputfilebase"]
 outputfiledir = ConfigData["outputfiledir"]
 Nx = ConfigData["PixelBoundaryNx"]
@@ -133,14 +144,14 @@ NumElec = ConfigData["CollectedCharge_0_0"]
 
 PlotDelta = int(sys.argv[3])
 
-filename = outputfiledir + '/' + outputfilebase +'_%d_Area'%run
+filename = outputfiledir + '/' + outputfilebase +'_%d_Area'%run + '.dat'
 
 area = ReadAreaFile(filename, Nx, Ny)
 figure()
 subplot(1,1,1,aspect = 1)
 title("Pixel Area: %d e-"%NumElec)
 
-filename = outputfiledir + '/' + outputfilebase +'_%d_Vertices'%run
+filename = outputfiledir + '/' + outputfilebase +'_%d_Vertices'%run + '.dat'
 
 (vx, vy) = ReadVertexFile(filename, Nx, Ny, NumAngles)
 
@@ -154,7 +165,7 @@ title("Pixel Vertices: %d e-"%NumElec)
 for i in range(NxCenter-PlotDelta, NxCenter+PlotDelta+1):
     plot([XCenter+PixelSize*(i-NxCenter-0.5), XCenter+PixelSize*(i-NxCenter-0.5)], [LineYMin, LineYMax], color = 'black', ls = '--')
 for j in range(NyCenter-PlotDelta, NyCenter+PlotDelta+1):
-    plot([LineXMin, LineXMax], [YCenter+PixelSize*(j-NyCenter-0.5), YCenter+PixelSize*(j-NyCenter-0.5)], color = 'black', ls = '--') 
+    plot([LineXMin, LineXMax], [YCenter+PixelSize*(j-NyCenter-0.5), YCenter+PixelSize*(j-NyCenter-0.5)], color = 'black', ls = '--')
 
 
 for i in range(NxCenter-PlotDelta, NxCenter+PlotDelta+1):
