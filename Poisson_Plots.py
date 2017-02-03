@@ -37,6 +37,7 @@ class Array3dHDF5(object):
         self.x=xgrid[:,2]
         self.y=ygrid[:,2]
         self.z=zgrid[:,2]
+        self.dz=(zgrid[:,3] - zgrid[:,1])        
 
         hdfphi = h5py.File(phifile,'r')
         self.phi=array(hdfphi[hdfphi.items()[0][0]])
@@ -52,6 +53,13 @@ class Array3dHDF5(object):
             self.Ey=array(hdfEy[hdfEy.items()[0][0]])
             hdfEz = h5py.File(Ezfile,'r')
             self.Ez=array(hdfEz[hdfEz.items()[0][0]])
+
+        elecfile = dir+'/'+filebase+'_'+str(run)+'_Elec' + '.hdf5'
+        hdfelec = h5py.File(elecfile,'r')
+        holefile = dir+'/'+filebase+'_'+str(run)+'_Hole' + '.hdf5'
+        hdfhole = h5py.File(holefile,'r')
+        self.elec=array(hdfelec[hdfelec.items()[0][0]])
+        self.hole=array(hdfhole[hdfhole.items()[0][0]])
 
 def ReadConfigFile(filename):
     # This reads the Poisson simulator config file for
@@ -132,6 +140,9 @@ dat = Array3dHDF5(outputfiledir, outputfilebase, ConfigData["LogEField"], run)
 
 ScaleFactor = ConfigData["ScaleFactor"]
 GridsPerPixel = ConfigData["GridsPerPixel"]
+ChargeFactor = 1.6E-19 * 1.0E6 / (11.7 * 8.85E-12)/((dat.x[1]-dat.x[0])*(dat.y[1]-dat.y[0])) #(QE*MICRON_PER_M/(EPSILON_0*EPSILON_SI))/(dx*dy)
+
+
 nxx = dat.nx - 1
 nyy = dat.ny - 1
 nzz = dat.nz - 1
@@ -162,12 +173,14 @@ nxmax = nxcenter + (NumPixelsPlotted * ScaleFactor * GridsPerPixel)/2
 nzmin = 0
 nzmax = 16 * ScaleFactor
 
+
 # Create the output directory if it doesn't exist
 if not os.path.isdir(outputfiledir+"/plots"):
     os.mkdir(outputfiledir+"/plots")
 
 rcParams['contour.negative_linestyle'] = 'solid'
 rcParams.update({'font.size': 6})
+
 
 print "Making array edge potential plots\n"
 figure()
@@ -216,111 +229,87 @@ legend()
 
 savefig(outputfiledir+"/plots/"+outputfilebase+"_Edge_Potentials_%d.pdf"%run)
 
-print "Making 1D potential and Charge Density plots\n"
+print "Making 1D Potential and Charge Density plots\n"
 figure()
 
 suptitle("1D Potential and Charge Density Slices. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
 plotcounter = 1
 subplots_adjust(hspace=0.3, wspace=0.3)
-phinumzs = 100
-numzs = 100
+phinumzs = 160
+numzs = 160
+elecnumzs = ConfigData["Nzelec"] * ConfigData["ScaleFactor"]
 
 subplot(2,3,1)
-title("Phi-Collect Gate")
-plot(dat.z[0:phinumzs],(dat.phi[nxcenter2,nycenter2,0:phinumzs]+dat.phi[nxcenter2-1,nycenter2,0:phinumzs]+dat.phi[nxcenter2,nycenter2-1,0:phinumzs]+dat.phi[nxcenter2-1,nycenter2-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter2]+dat.x[nxcenter2-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
+title("Phi-Collect Gate", fontsize=12)
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter2,nycenter2,0:phinumzs]+dat.phi[nxcenter2-1,nycenter2,0:phinumzs]+dat.phi[nxcenter2,nycenter2-1,0:phinumzs]+dat.phi[nxcenter2-1,nycenter2-1,0:phinumzs])/4.0, label = "80K electrons")
 
 nxcenter3 = nxcenter2 + 4 * GridsPerPixel*ScaleFactor
 
-plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter2,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2,0:phinumzs]+dat.phi[nxcenter3,nycenter2-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter2,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2,0:phinumzs]+dat.phi[nxcenter3,nycenter2-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter2-1,0:phinumzs])/4.0, label = "Empty Well")
 legend(loc = "lower left")
-xlabel("Z-Dimension (microns)")
-ylabel('$\phi(x,y,z)$ [V]')
-ylim(-10.0, 15.0)
+#xlabel("Z-Dimension (microns)")
+ylabel('$\phi(x,y,z)$ [V]',fontsize=12)
+ylim(-5.0, 15.0)
 xlim(0.0,4.0)
 
 subplot(2,3,4)
-title("Rho-Collect Gate")
-zs = []
-rhos = []
-for i in range(1,numzs):
-    for m in [-1,0,1]:
-        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
-        rhos.append((dat.rho[nxcenter2,nycenter2,i]+dat.rho[nxcenter2-1,nycenter2,i]+dat.rho[nxcenter2,nycenter2-1,i]+dat.rho[nxcenter2-1,nycenter2-1,i])/4.0)
+title("Rho-Collect Gate", fontsize=12)
+plot(dat.z[0:numzs], (dat.rho[nxcenter2,nycenter2,0:numzs]+dat.rho[nxcenter2-1,nycenter2,0:numzs]+dat.rho[nxcenter2,nycenter2-1,0:numzs]+dat.rho[nxcenter2-1,nycenter2-1,0:numzs])/4.0, label = "Fixed charge", color='green')
+plot(dat.z[0:elecnumzs], -ChargeFactor * (dat.elec[nxcenter2,nycenter2,0:elecnumzs]+dat.elec[nxcenter2-1,nycenter2,0:elecnumzs]+dat.elec[nxcenter2,nycenter2-1,0:elecnumzs]+dat.elec[nxcenter2-1,nycenter2-1,0:elecnumzs])/4.0 / dat.dz[0:elecnumzs], label = "80K electrons", color='blue')
+plot(dat.z[0:elecnumzs], -ChargeFactor * (dat.elec[nxcenter3,nycenter2,0:elecnumzs]+dat.elec[nxcenter3-1,nycenter2,0:elecnumzs]+dat.elec[nxcenter3,nycenter2-1,0:elecnumzs]+dat.elec[nxcenter3-1,nycenter2-1,0:elecnumzs])/4.0 / dat.dz[0:elecnumzs], label = "Empty well", color='magenta')
 
-plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter2]+dat.x[nxcenter2-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
-
-zs = []
-rhos = []
-for i in range(1,numzs):
-    for m in [-1,0,1]:
-        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
-        rhos.append((dat.rho[nxcenter3,nycenter2,i]+dat.rho[nxcenter3-1,nycenter2,i]+dat.rho[nxcenter3,nycenter2-1,i]+dat.rho[nxcenter3-1,nycenter2-1,i])/4.0)
-
-plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter2]+dat.y[nycenter2-1])/2.0))
 legend(loc = "lower left")
-xlabel("Z-Dimension (microns)")
-ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
-ylim(-60.0, 40.0)
+xlabel("Z-Dimension (microns)", fontsize=12)
+ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]',fontsize=12)
+ylim(-80.0, 80.0)
 xlim(0.0,4.0)
 nxcenter3 = nxcenter2 + 3 * GridsPerPixel * ScaleFactor / 2
 nycenter3 = nycenter2
 nycenter4 = nycenter2 + GridsPerPixel * ScaleFactor / 2
 subplot(2,3,2)
-title("Phi-ChanStop")
-plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3,0:phinumzs]+dat.phi[nxcenter3,nycenter3-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter3]+dat.y[nycenter3-1])/2.0))
-plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter4,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4,0:phinumzs]+dat.phi[nxcenter3,nycenter4-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4-1,0:phinumzs])/4.0, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter4]+dat.y[nycenter4-1])/2.0))
+title("Phi-ChanStop", fontsize=12)
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3,0:phinumzs]+dat.phi[nxcenter3,nycenter3-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3-1,0:phinumzs])/4.0, label = "CollectGate")
+plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter4,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4,0:phinumzs]+dat.phi[nxcenter3,nycenter4-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter4-1,0:phinumzs])/4.0, label = "Barrier Gate")
 legend(loc = "lower left")
-xlabel("Z-Dimension (microns)")
-ylabel('$\phi(x,y,z)$ [V]')
-ylim(-20.0, 15.0)
+#xlabel("Z-Dimension (microns)")
+#ylabel('$\phi(x,y,z)$ [V]',fontsize=9)
+ylim(-10.0, 10.0)
 xlim(0.0,10.0)
 subplot(2,3,5)
-title("Rho-ChanStop")
-zs = []
-rhos = []
-for i in range(1,numzs):
-    for m in [-1,0,1]:
-        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
-        rhos.append((dat.rho[nxcenter3,nycenter3,i]+dat.rho[nxcenter3-1,nycenter3,i]+dat.rho[nxcenter3,nycenter3-1,i]+dat.rho[nxcenter3-1,nycenter3-1,i])/4.0)
-plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter3]+dat.y[nycenter3-1])/2.0))
+title("Rho-ChanStop", fontsize=12)
 
-zs = []
-rhos = []
-for i in range(1,numzs):
-    for m in [-1,0,1]:
-        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
-        rhos.append((dat.rho[nxcenter3,nycenter4,i]+dat.rho[nxcenter3-1,nycenter4,i]+dat.rho[nxcenter3,nycenter4-1,i]+dat.rho[nxcenter3-1,nycenter4-1,i])/4.0)
+plot(dat.z[0:numzs], ((dat.rho[nxcenter3,nycenter3,0:numzs]+dat.rho[nxcenter3-1,nycenter3,0:numzs]+dat.rho[nxcenter3,nycenter3-1,0:numzs]+dat.rho[nxcenter3-1,nycenter3-1,0:numzs])/4.0), color = 'green', label = "Fixed charge")
 
-plot(zs, rhos, label = "x = %.2f, y = %.2f"%((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0,(dat.y[nycenter4]+dat.y[nycenter4-1])/2.0))
+plot(dat.z[0:elecnumzs], ChargeFactor / dat.dz[0:elecnumzs] * ((dat.hole[nxcenter3,nycenter3,0:elecnumzs]+dat.hole[nxcenter3-1,nycenter3,0:elecnumzs]+dat.hole[nxcenter3,nycenter3-1,0:elecnumzs]+dat.hole[nxcenter3-1,nycenter3-1,0:elecnumzs])/4.0), label = "Holes Collect Gate", color = 'red')
+
+plot(dat.z[0:elecnumzs], ChargeFactor / dat.dz[0:elecnumzs] * ((dat.hole[nxcenter3,nycenter4,0:elecnumzs]+dat.hole[nxcenter3-1,nycenter4,0:elecnumzs]+dat.hole[nxcenter3,nycenter4-1,0:elecnumzs]+dat.hole[nxcenter3-1,nycenter4-1,0:elecnumzs])/4.0), label = "Holes Barrier Gate", color = 'orange', )
 
 legend(loc = "lower left")
-xlabel("Z-Dimension (microns)")
-ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
-ylim(-200.0, 200.0)
+xlabel("Z-Dimension (microns)", fontsize=12)
+#ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]',fontsize=9)
+ylim(-50.0, 50.0)
 xlim(0.0,10.0)
 
 nxcenter3 = nxcenter2
 nycenter3 = nycenter2 + GridsPerPixel * ScaleFactor / 2
 subplot(2,3,3)
-title("Phi-Barrier Gate, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
+title("Phi-Barrier Gate", fontsize=12)
 plot(dat.z[0:phinumzs],(dat.phi[nxcenter3,nycenter3,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3,0:phinumzs]+dat.phi[nxcenter3,nycenter3-1,0:phinumzs]+dat.phi[nxcenter3-1,nycenter3-1,0:phinumzs])/4.0)
-xlabel("Z-Dimension (microns)")
-ylabel('$\phi(x,y,z)$ [V]')
-ylim(-20.0, 15.0)
+#xlabel("Z-Dimension (microns)")
+#ylabel('$\phi(x,y,z)$ [V]',fontsize=9)
+ylim(-10.0, 10.0)
 xlim(0.0,4.0)
 subplot(2,3,6)
-title("Rho-Barrier Gate, x = %.2f, y = %.2f"%(((dat.x[nxcenter3]+dat.x[nxcenter3-1])/2.0),((dat.y[nycenter3]+dat.y[nycenter3-1])/2.0)))
-zs = []
-rhos = []
-for i in range(1,numzs):
-    for m in [-1,0,1]:
-        zs.append(dat.z[i] - 0.4 * (dat.z[i] - dat.z[i+m]))
-        rhos.append((dat.rho[nxcenter3,nycenter3,i]+dat.rho[nxcenter3-1,nycenter3,i]+dat.rho[nxcenter3,nycenter3-1,i]+dat.rho[nxcenter3-1,nycenter3-1,i])/4.0)
+title("Rho-Barrier Gate", fontsize=12)
 
-plot(zs, rhos)
-xlabel("Z-Dimension (microns)")
-ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]')
-ylim(-40.0, 40.0)
+plot(dat.z[0:numzs], ((dat.rho[nxcenter3,nycenter3,0:numzs]+dat.rho[nxcenter3-1,nycenter3,0:numzs]+dat.rho[nxcenter3,nycenter3-1,0:numzs]+dat.rho[nxcenter3-1,nycenter3-1,0:numzs])/4.0), color = 'green', label = "Fixed charge")
+
+plot(dat.z[0:elecnumzs], ChargeFactor / dat.dz[0:elecnumzs] * ((dat.hole[nxcenter3,nycenter3,0:elecnumzs]+dat.hole[nxcenter3-1,nycenter3,0:elecnumzs]+dat.hole[nxcenter3,nycenter3-1,0:elecnumzs]+dat.hole[nxcenter3-1,nycenter3-1,0:elecnumzs])/4.0), color = 'red', label = "Holes")
+
+legend(loc = "lower left")
+xlabel("Z-Dimension (microns)", fontsize=12)
+#ylabel('$\\rho(x,y,z)/\epsilon_{Si}$ [V/um$^2$]',fontsize=9)
+ylim(-80.0, 80.0)
 xlim(0.0,4.0)
 savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_%d.pdf"%run)
 
@@ -328,7 +317,7 @@ print "Making 1D potential Plots #2 \n"
 figure()
 suptitle("1D Potentials in Storage Region. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
 subplots_adjust(hspace=0.3, wspace=0.3)
-slicez = 16 * ScaleFactor
+slicez = 8 * ScaleFactor
 subplot(1,2,1, aspect = 1)
 title("Phi, z = %.2f"%dat.z[slicez])
 levels = linspace(-20.0, 20.0, 21)
@@ -353,7 +342,7 @@ legend()
 savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_2_%d.pdf"%run)
 
 print "Making 1D potential Plots #3 \n"
-slicezs = [4,8,12,14,16,18,20,24]
+slicezs = [4,6,8,10,12,14,16,18]
 figure()
 suptitle("1D Potentials in Storage Region. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
 subplots_adjust(hspace=0.3, wspace=0.3)
@@ -369,6 +358,34 @@ for i,slicez in enumerate(slicezs):
     ylabel("Potential(Volts)")
     legend()
 savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_3_%d.pdf"%run)
+
+print "Making 1D potential Plots #5 \n"
+slicezs = [4,8,12,16]
+figure()
+suptitle("1D Potentials in Storage Region. Grid = %d*%d*%d."%(nxx,nyy,nzz),fontsize = 18)
+subplots_adjust(hspace=0.3, wspace=0.3)
+
+for i,slicez in enumerate(slicezs):
+    subplot(2,4,i+1)
+    title("Phi, z = %.2f"%dat.z[slicez])
+    plot(dat.x[nxmin:nxmax],dat.phi[nxmin:nxmax, nycenter2, slicez], label = "XSlice, y = %.2f"%dat.y[nycenter2])
+    plot(dat.y[nymin:nymax],dat.phi[nxcenter2,nymin:nymax, slicez], label = "YSlice, x = %.2f"%dat.x[nxcenter2])
+    ylim(-10.0, 20.0)
+    xlim(dat.x[nxmin],dat.x[nxmax])
+    xlabel("X,Y-Dimension (microns)")
+    ylabel("Potential(Volts)")
+    legend()
+for i,slicez in enumerate(slicezs):
+    subplot(2,4,i+5)
+    title("Holes, z = %.2f"%dat.z[slicez])
+    plot(dat.x[nxmin:nxmax],dat.hole[nxmin:nxmax, nycenter2, slicez], label = "XSlice, y = %.2f"%dat.y[nycenter2])
+    plot(dat.y[nymin:nymax],dat.hole[nxcenter2,nymin:nymax, slicez], label = "YSlice, x = %.2f"%dat.x[nxcenter2])
+    #ylim(-5.0, 0.0)
+    xlim(dat.x[nxmin],dat.x[nxmax])
+    xlabel("X,Y-Dimension (microns)")
+    ylabel("Holes")
+    legend()
+savefig(outputfiledir+"/plots/"+outputfilebase+"_1D_Potentials_5_%d.pdf"%run)
 
 print "Making 1D potential Plots #4 \n"
 figure()
@@ -415,7 +432,7 @@ title("Phi, z = 0.0")
 if EdgePlot:
     levels = linspace(-40.0, 10.0, 51)
 else:
-    levels = linspace(-10.0, 10.0, 21)
+    levels = linspace(-10.0, 10.0, 31)
 contour(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels,lw=0.1)
 contourf(xx,yy,dat.phi[nxmin:nxmax,nymin:nymax,slicez],levels)
 xlabel("X-Dimension (microns)")
@@ -428,7 +445,7 @@ nymin2 = nymin - 9 * GridsPerPixel * ScaleFactor / 2
 rho0 = dat.rho[nxmin2,nymin2,slicez+1]
 
 title("Rho, z = %.2f - %.2f"%(dat.z[nzmin],dat.z[nzmax]))
-levels = linspace(-10.0,10.0,41)
+levels = linspace(-2.0,15.0,34)
 plotarray = array(dat.rho[nxmin:nxmax,nymin:nymax,nzmin:nzmax].sum(axis=2)/(nzmax-nzmin))
 contour(xx,yy,plotarray, levels, lw=0.1)
 contourf(xx,yy,plotarray, levels)
@@ -537,10 +554,12 @@ lines.remove(lines[0])
 for line in lines:
     values = line.split()
     phase = int(values[2])
+    #zout = float(values[5])        
     if phase == 0:
         xin = float(values[3])
         yin = float(values[4])
-    elif phase == 4:
+    elif phase == 2:
+    #elif zout < 1.20:
         xout = float(values[3])
         yout = float(values[4])
         if isnan(xout) or isnan(yout):
@@ -586,7 +605,7 @@ if ConfigData["LogPixelPaths"] != 0 and run % ConfigData["LogPixelPaths"] == 0:
     # Plotting the paths along a line through the center
     yline = (ConfigData["PixelBoundaryLowerLeft"][1] + ConfigData["PixelBoundaryUpperRight"][1] + ConfigData["PixelBoundaryStepSize"][1]) / 2.0
     xline = (ConfigData["PixelBoundaryLowerLeft"][0] + ConfigData["PixelBoundaryUpperRight"][0] + ConfigData["PixelBoundaryStepSize"][0]) / 2.0
-
+    #print xline, yline
     vertical_zoom = 1
     figure()
     suptitle("Electron Path Plot - Vertical Zoom = %d"%vertical_zoom, fontsize = 24)
@@ -620,7 +639,9 @@ if ConfigData["LogPixelPaths"] != 0 and run % ConfigData["LogPixelPaths"] == 0:
             if YPlotThisID:
                 xpaths.append(xout)
                 zxpaths.append(zout)
-                if phase == 4:
+                if phase == 2:
+                #if zout < 1.20:
+                    #print "Finished this path", xin, yin 
                     pixxin = int(xin/10.0)
                     if pixxin % 2 == 0:
                         color = "red"
@@ -632,7 +653,8 @@ if ConfigData["LogPixelPaths"] != 0 and run % ConfigData["LogPixelPaths"] == 0:
             if XPlotThisID:
                 ypaths.append(yout)
                 zypaths.append(zout)
-                if phase == 4:
+                if phase == 2:
+                #if zout < 1.20:                    
                     pixyin = int(yin/10.0)
                     if pixyin % 2 == 0:
                         color = "red"

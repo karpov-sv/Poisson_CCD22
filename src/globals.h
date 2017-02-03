@@ -22,3 +22,5 @@
 #define MICRON_PER_M   1000000.0
 #define MICRON_PER_CM  10000.0
 #define METER_PER_CM   0.01
+#define EG             1.1      // Silicon Band Gap
+#define NS             2.5E19   // Silicon available states per cm^3

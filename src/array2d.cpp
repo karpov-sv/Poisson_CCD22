@@ -19,7 +19,7 @@ Array2D::Array2D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
   dx = (xmax - xmin) / (double) nx;
   dy = (ymax - ymin) / (double) ny;
   x = new double[nx]; y = new double[ny];
-  data = new int[nx * ny];
+  data = new double[nx * ny];
   for (j=0; j<ny; j++)
     {
       y[j] = ymin + dy/2.0 + (double) j * dy;
@@ -29,7 +29,7 @@ Array2D::Array2D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
       x[i] = xmin + dx/2.0 + (double) i * dx;	  
       for (j=0; j<ny; j++)
 	{
-	  data[i + j*nx] = 0;
+	  data[i + j * nx] = 0.0;
 	}
     }
 }

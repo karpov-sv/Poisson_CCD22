@@ -40,7 +40,8 @@ class MultiGrid
 
   double w;		// Successive Over-Relaxation factor
   int ncycle;		// Number of SOR cycles at each resolution
-  int iterations;		// Number of VCycles
+  int ncycle_loop;	// Number of SOR cycles in repeated loops  
+  int iterations;	// Number of VCycles
   double NZExp;		// Non-linear z axis exponent
   
   int ScaleFactor;       // Power of 2 that sets the grid size
@@ -65,6 +66,8 @@ class MultiGrid
   int YBCType;            // Free or periodic BC in Y-direction
 
   // Voltages and Charges
+  double Ni;            // Intrinsic carrier concentration at operating temperature
+  double ktq;           // kT/q
   double Vbb;		// Back bias
   double Vparallel_lo;	// Parallel Low Voltage
   double Vparallel_hi;	// Parallel High Voltage
@@ -75,6 +78,8 @@ class MultiGrid
 
   int Channelkmin;              // Bottom of channel region doping
   int Channelkmax;              // Top of channel region doping
+  int Troughkmin;              // Bottom of trough region doping
+  int Troughkmax;              // Top of trough region doping
   int ChannelStopkmin;          // Bottom of channel stop region doping
   int ChannelStopkmax;          // Top of channel stop region doping
   int ChannelProfile;           // 0 = Square well, 1 = Gaussian
@@ -84,32 +89,46 @@ class MultiGrid
   double ChannelStopDepth;     	// Channel stop depth in microns
   double ChannelStopWidth;     	// Channel stop width in microns
   double ChannelStopCharge;
+  double ChannelStopPeak;       // Depth of peak of channel stop implant below silicon surface in microns
   double CSChargeDepth;
   double ChannelDoping;		// Channel doping
   double ChannelDepth;		// Channel depth in microns
+  double ChannelPeak;           // Depth of peak of channel implant below silicon surface in microns
+  int TroughImplant;            // 1 = Uses Trough implant; 0 = No Trough implant
+  double TroughDoping;          // Trough doping in cm^-2
+  int TroughProfile;            // 0 = Square profile, 1 = Gaussian profile
+  double TroughDepth;           // Trough depth in microns
+  double TroughWidth;           // Trough width in microns
+  double TroughPeak;           // Depth of peak of trough implant below silicon surface in microns
   double GateOxide;             // Gate oxide thickness in microns
   double Gox_effective;         // Effective gate oxide thickness in microns (includes effect of discretization)
+  double FieldOxide;            // Field oxide thickness in microns
+  double FieldOxideTaper;       // Field oxide taper width in microns  
   double Delta_Z;               // Z-axis shift due to difference in dielectric constant between Si and SiO2
   int UndepletedChannelStop;	// 0 = No undepleted Region, 1 = undepleted Region
   double HoleConvergenceVoltage;  // Voltage to which we converge the hole calculation
 
 // Pixel Regions
 
-  int NumberofPixelRegions;	  	  // 1
+  int NumberofPixelRegions;	  	  // 
   double** PixelRegionLowerLeft;	  //
   double** PixelRegionUpperRight;	  //
   int* NumberofFilledWells;		  //
   int** CollectedCharge;		  // Collected charge in e-
   double*** FilledPixelCoords;            // (x,y) coords of pixel center
-  int CollectingPhases;                   // Number of collecting phases
-  double CollectedChargeZmin;   	  // These parameters allow you to set the location of the initial collected charge
-  double CollectedChargeZmax;
-  double CollectedChargeXmin;
-  double CollectedChargeXmax;
-  double CollectedChargeYmin;
-  double CollectedChargeYmax;
+  double** ElectronCount;                 // Number of electrons in each filled pixel
+  double** PixelQFe;                      // QFe in each filled pixel
 
-// Added dipoles
+  // QFe Look-up table
+  int BuildQFeLookup;        // 0 - No QFe lookup; 1 - Build QFeLookup
+  int NQFe;                  // Number of entries in QFELookup table             
+  double QFemin;             // Minimum QFe in table
+  double QFemax;             // Maximum QFe in table
+  double* QFeLookup;         // QFeLookup table
+  
+  int CollectingPhases;                   // Number of collecting phases
+
+  // Added dipoles
 
   int NumberofDipoles;                  // Number of dipoles
   double** DipoleCoords;                // X,Y coords of dipole center
@@ -126,7 +145,6 @@ class MultiGrid
   double* FixedRegionDoping;
   double* FixedRegionChargeDepth;
   int* FixedRegionBCType;
-  Array2D** BCType;      // BCType - 0->fixed potential; 1->Enormal = 0
 
   // Pixel Boundary Tests
 
@@ -147,7 +165,8 @@ class MultiGrid
   double DiffMultiplier;
   int NumDiffSteps;
   int EquilibrateSteps;
-  int BottomSteps;    
+  int BottomSteps;
+  int ElectronAccumulation;      
   int SaturationModel;
   int NumElec;
   int NumSteps;
@@ -177,27 +196,30 @@ class MultiGrid
 
   Array3D** phi;      // Phi arrays
   Array3D** rho;      // Rho arrays
-  Array3D** E;
+  Array3D** E;        // Electric field
   Array3D** elec;      // Number of stored electrons
   Array3D** hole;      // Number of mobile holes
-
+  Array3D** eps;      // Dielectric constant array    
+  Array2D** BCType;      // BCType - 0->fixed potential; 1->Enormal = 0
+  Array2D** QFe;         // Electron Quasi-Fermi level
+  Array2D** QFh;         // Hole Quasi-Fermi level  
+  double qfe;
+  double qfh;
   MultiGrid() {};
   MultiGrid(string);
   ~MultiGrid();
 
   void ReadConfigurationFile(string);
-  void BuildArrays(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2D**);
+  void BuildArrays(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2D**, Array2D**, Array2D**);
   void SaveGrid();
   void SetInitialVoltages(Array3D*, Array2D*);
   void SetFixedCharges(Array3D*, Array2D*);
-  void SetInitialElectrons(Array3D*, Array3D*);
-  void SetInitialHoles(Array3D*, Array3D*);
-  double AdjustHoles(Array3D*, Array3D*, Array3D*);
-  void SOR(Array3D*, Array3D*, Array2D*, double);
-  double Error(Array3D*, Array3D*);
+  double SOR_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2D*, Array2D*, Array2D*, double);
+  double Error_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*);
   void Restrict(Array3D*, Array3D*, Array3D*, Array3D*, Array2D*, Array2D*);
   void Prolongate(Array3D*, Array3D*, Array2D*);
-  void VCycle(Array3D**, Array3D**, Array3D**, Array3D**, Array2D**, double, int, int);
+  void VCycle_Inner(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2D**, Array2D**, Array2D**, double, int, int);
+  void VCycle_Zero(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2D**, Array2D**, Array2D**, double, int);  
   void WriteOutputFile(string, string, string, Array3D*);
   void ReadOutputFile(string, string, string, Array3D*);
   void Gradient(Array3D*, Array3D**);
@@ -209,7 +231,14 @@ class MultiGrid
   void FindEdge(double*, double, ofstream&);
   void FindCorner(double*, double*, ofstream&);
   void CalculatePixelAreas(int);
-  void AddDipolePotentials(Array3D*);
   double mu_Si (double, double);
-  void FillRho(Array3D*, Array3D*, Array3D*);
+  void Set_QFh(Array2D**, double);
+  void Adjust_QFe(Array2D**, Array3D*, Array3D*);
+  double ElectronQF(int);
+  void WriteQFeLookup(string, string, string);
+  void WriteCollectedCharge(string, string, string);  
+  void ReadQFeLookup(string, string, string);
+  void Setkmins(Array3D**, Array3D**, Array3D**);
+  void CountCharges(Array3D**, Array3D**, Array3D**);
+  void FillRho(Array3D*, Array3D*);
 };

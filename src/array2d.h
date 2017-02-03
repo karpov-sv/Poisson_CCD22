@@ -19,8 +19,8 @@
 class Array2D //This packages the 2D data sets
 {
  public:
-  int nx, ny, *data;
-  double xmin, xmax, ymin, ymax, dx, dy, dz, *x, *y;
+  int nx, ny;
+  double xmin, xmax, ymin, ymax, dx, dy, dz, *x, *y, *data;
   Array2D() {};
   Array2D(double, double, int, double, double, int);
   ~Array2D();
