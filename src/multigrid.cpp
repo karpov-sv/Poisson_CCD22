@@ -27,9 +27,6 @@ MultiGrid::MultiGrid(string inname) //Constructor
   ReadConfigurationFile(inname);
   printf("Finished Reading config file\n");
   // Then, we build the multigrid arrays and set the initial conditions
-  nsteps = 5 + (int)(log2(ScaleFactor));
-  // nsteps is the number of reduction steps in the VCycle.
-  // This gives 4 grid cells in the z-direction at the coarsest scale
   phi = new Array3D*[nsteps+1];
   rho = new Array3D*[nsteps+1];
   elec = new Array3D*[1];
@@ -104,12 +101,16 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	{
 	  TraceSpot(m);
 	}
+      if (PixelBoundaryTestType == 3)
+	{
+	  TraceList(m);
+	}
       if (PixelBoundaryTestType == 2 || PixelBoundaryTestType == 4)
 	{
 	  TraceRegion(m);
 	}
     // Calculate pixel areas after tracing electrons, if requested.
-    if (PixelAreas >= 0 && (m % PixelAreas) == 0)
+    if (PixelAreas >= 0 && (m % PixelAreas) == 0 && m != 0)
     {
         CalculatePixelAreas(m);
     }
@@ -205,11 +206,16 @@ void MultiGrid::ReadConfigurationFile(string inname)
   NZExp = GetDoubleParam(inname, "NZExp", 10.0);        // Non-linear z axis exponent
   
   // Overall setup
+  outputfilebase  = GetStringParam(inname,"outputfilebase", "Test"); //Output filename base
+  outputfiledir  = GetStringParam(inname,"outputfiledir", "data"); //Output filename directory
   VerboseLevel = GetIntParam(inname, "VerboseLevel", 1); // 0 - minimal output, 1 - normal, 2 - more verbose.
   SaveData =  GetIntParam(inname, "SaveData", 1);     // 0 - Save only Pts, N save phi,rho,E every Nth step
   SaveElec =  GetIntParam(inname, "SaveElec", 1);     // 0 - Save only Pts, N save Elec every Nth step
   ScaleFactor =  GetIntParam(inname, "ScaleFactor", 1);     // Power of 2 that sets the grid size
   // ScaleFactor = 1 means grid size is 5/6 micron, 128 grids in the z-direction
+  nsteps = 5 + (int)(log2(ScaleFactor));
+  // nsteps is the number of reduction steps in the VCycle.
+  // This gives 4 grid cells in the z-direction at the coarsest scale
   PixelSize = GetDoubleParam(inname, "PixelSize", 10.0);    // Pixel size in microns
   SensorThickness = GetDoubleParam(inname, "SensorThickness", 100.0);    // Sensor Thickness in microns  
   GridsPerPixel = GetIntParam(inname, "GridsPerPixel", 12); // Grids per pixel at ScaleFactor = 1
@@ -360,10 +366,11 @@ void MultiGrid::ReadConfigurationFile(string inname)
   ElectronZ0Fill = GetDoubleParam(inname,"ElectronZ0Fill",100.0);
   PixelBoundaryNx = GetIntParam(inname, "PixelBoundaryNx", 9);
   PixelBoundaryNy = GetIntParam(inname, "PixelBoundaryNy", 9);
+  NumElec = GetIntParam(inname, "NumElec", 1000);
+  NumSteps = GetIntParam(inname, "NumSteps", 100);      
 
   if (PixelBoundaryTestType == 0)
     {
-      NumSteps = GetIntParam(inname, "NumSteps", 100);
       PixelBoundaryStepSize = new double(2);
       for (j=0; j<2; j++)
 	{
@@ -373,17 +380,22 @@ void MultiGrid::ReadConfigurationFile(string inname)
     }
   if (PixelBoundaryTestType == 1)
     {
-      NumElec = GetIntParam(inname, "NumElec", 1000);
-      NumSteps = GetIntParam(inname, "NumSteps", 100);
       Sigmax = GetDoubleParam(inname, "Sigmax", 1.0);
       Sigmay = GetDoubleParam(inname, "Sigmay", 1.0);
       Xoffset = GetDoubleParam(inname, "Xoffset", 0.0);
       Yoffset = GetDoubleParam(inname, "Yoffset", 0.0);
     }
-  if((PixelBoundaryTestType == 2) || (PixelBoundaryTestType == 4))
+  if (PixelBoundaryTestType == 3)
     {
-      NumElec = GetIntParam(inname, "NumElec", 1000);
-      NumSteps = GetIntParam(inname, "NumSteps", 100);
+      PhotonList  = GetStringParam(inname,"PhotonList", "None"); //Photon List file
+      if (PhotonList == "None")
+	{
+	  printf("No PhotonList specified.  Quitting.");
+	}
+      else
+	{
+	  ReadPhotonList(outputfiledir, PhotonList);
+	}
     }
 
     // Filter band configuration.
@@ -422,9 +434,6 @@ void MultiGrid::ReadConfigurationFile(string inname)
         }
         filter_input.close();
     }
-
-  outputfilebase  = GetStringParam(inname,"outputfilebase", "Test"); //Output filename base
-  outputfiledir  = GetStringParam(inname,"outputfiledir", "data"); //Output filename directory
   return;
 }
 
@@ -475,6 +484,64 @@ void MultiGrid::BuildArrays(Array3D** phi, Array3D** rho, Array3D** elec, Array3
     }
   return;
 }
+
+void MultiGrid::ReadPhotonList(string outputfiledir, string name)
+{
+  // This reads the PhotonList
+  int i = 0, success;
+  string line, filename = outputfiledir+'/'+name;
+  ifstream pl_in(filename.c_str());
+  getline (pl_in,line); //Skip first line, which is labels
+  while (!pl_in.eof())
+    {
+      getline (pl_in,line);
+      i += 1;
+    }
+  NumPhotons = i-1;
+  pl_in.clear();
+  pl_in.seekg (0, ios::beg); //Reset back to line 1
+  getline (pl_in,line);//Skip first line, which is labels
+  PhotonListx = new double[NumPhotons];
+  PhotonListy = new double[NumPhotons];
+  PhotonListdxdz = new double[NumPhotons];
+  PhotonListdydz = new double[NumPhotons];
+  PhotonListlambda = new double[NumPhotons];  
+  double x, y, dxdz, dydz, lambda;
+  while (!pl_in.eof())
+    {
+      getline (pl_in,line);
+      istringstream iss(line);
+      //printf("Line %d = %s\n",i,line.c_str());
+      if (!(iss >> i >> x >> y >> dxdz >> dydz >> lambda))
+	{
+	  success = 0;
+	  break; // error
+	}
+      if (i < 0 || i > NumPhotons - 1)
+	{
+	  success = 0;
+	  break; // error
+	}
+      PhotonListx[i] = x;
+      PhotonListy[i] = y;
+      PhotonListdxdz[i] = dxdz;
+      PhotonListdydz[i] = dydz;
+      PhotonListlambda[i] = lambda;      
+    }
+  if (i == NumPhotons - 1) success = 1;
+  pl_in.close();
+  if (success == 1)
+    {
+      printf("File %s successfully read. Contains %d photons\n", filename.c_str(), NumPhotons);
+      return;
+    }
+  else
+    {
+      printf("Problem reading file %s. Quitting\n", filename.c_str());
+      exit(0);
+    }
+}
+
 
 void MultiGrid::SetInitialVoltages(Array3D* phi, Array2D* BCType)
 {
@@ -1695,6 +1762,76 @@ void MultiGrid::TraceSpot(int m)
       point[0] = x;
       point[1] = y;
       z = GetElectronInitialZ();
+      point[2] = z;
+      Trace(point, BottomSteps, true, bottomcharge, file);
+    }
+  file.close();
+  printf("Finished writing grid file - %s\n",filename.c_str());
+  fflush(stdout);
+  delete[] point;
+  LogPixelPaths = OldLogPixelPaths;
+  return;
+}
+
+void MultiGrid::TraceList(int m)
+{
+  // This builds up a Gaussian spot with given center (Xoffset, Yoffset) and SigmaX and SigmaY
+  double x, y, z, zbottom, xcenter, ycenter, abs_length, path_length;
+  zbottom = E[0]->zmz[Channelkmin] + 0.01;
+  int n, nlist;
+  double bottomcharge = 1.0 / (double)BottomSteps;
+  double* point = new double[3];
+  string underscore = "_", slash = "/", name = "Pts";
+  string StepNum = boost::lexical_cast<std::string>(m);
+  string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
+  ofstream file;
+  // If LogPixelPaths > 1, then we only log some pixel paths
+  int OldLogPixelPaths = LogPixelPaths;
+  if (LogPixelPaths != 0)
+    {
+      if (m % LogPixelPaths == 0)
+	{
+	  LogPixelPaths = 1;
+	}
+      else
+	{
+	  LogPixelPaths = 0;
+	}
+    }
+  file.open(filename.c_str());
+  file.setf(ios::fixed);
+  file.setf(ios::showpoint);
+  file.setf(ios::left);
+  file.precision(4);
+  // Write header line.
+  file << setw(8) << "id" << setw(8) << "step" << setw(3) << "ph"
+       << setw(15) << "x" << setw(15) << "y" << setw(15) << "z" << endl;
+
+  xcenter = (PixelBoundaryUpperRight[0] + PixelBoundaryLowerLeft[0]) / 2.0 + Xoffset;
+  ycenter = (PixelBoundaryUpperRight[1] + PixelBoundaryLowerLeft[1]) / 2.0 + Yoffset;
+  for (n=0; n<NumElec; n++)
+    {
+      nlist = m * NumElec + n;
+      if (nlist > NumPhotons)
+	{
+	  printf("Reached end of photon list in step %d.\n",m);
+	  return;
+	}
+
+      abs_length = pow(10.0,(-4.0 + (PhotonListlambda[nlist] - 500.0) / 250.0)) * 1.0E4; //Approximate formula in micron^-1
+      path_length = -abs_length * log(1.0 - drand48());
+      x = xcenter + PixelSize * PhotonListx[nlist]; // in microns
+      y = ycenter + PixelSize * PhotonListy[nlist]; // in microns      
+      x += PhotonListdxdz[nlist] * path_length;
+      y += PhotonListdydz[nlist] * path_length;
+      z = SensorThickness - path_length / sqrt(1.0 + PhotonListdxdz[nlist]*PhotonListdxdz[nlist] + PhotonListdydz[nlist]*PhotonListdydz[nlist]); // in microns
+      if (x < PixelBoundaryLowerLeft[0] || x > PixelBoundaryUpperRight[0] || y < PixelBoundaryLowerLeft[1] || y > PixelBoundaryUpperRight[1] || z > SensorThickness || z < zbottom) continue;
+      if (nlist % 1000 == 0)
+	{
+	  printf("Nlist = %d, (x,y,z) = (%f,%f,%f)\n",nlist,x,y,z);
+	}
+      point[0] = x;
+      point[1] = y;
       point[2] = z;
       Trace(point, BottomSteps, true, bottomcharge, file);
     }
