@@ -558,7 +558,7 @@ for line in lines:
     if phase == 0:
         xin = float(values[3])
         yin = float(values[4])
-    elif phase == 2:
+    elif phase == 2 or phase == 4:
     #elif zout < 1.20:
         xout = float(values[3])
         yout = float(values[4])
