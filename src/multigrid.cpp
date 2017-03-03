@@ -1225,7 +1225,7 @@ double MultiGrid::SOR_Inner(Array3D* phi, Array3D* rho, Array3D* elec, Array3D* 
 	    }
 	}
     }
-  if (rho->nz == 321) printf("Finished SOR_Inner, nz = %d, TotalElectrons = %.1f, TotalHoles = %.1f\n",rho->nz,TotalElectrons,TotalHoles);
+  //if (rho->nz == 321) printf("Finished SOR_Inner, nz = %d, TotalElectrons = %.1f, TotalHoles = %.1f\n",rho->nz,TotalElectrons,TotalHoles);
   if (mm > 0) AveIterations = (double)nn / (double)mm;
   return AveIterations;
 }

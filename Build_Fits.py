@@ -144,7 +144,8 @@ def FillSpotlist(ConfigData, run):
     spotlist = Array2dSet(stampxmin,stampxmax,nx,stampymin,stampymax,ny,1)
 
     dat = Array3dHDF5Elec(outputfiledir, outputfilebase, run)
-    
+
+    TotalElectrons = 0
     for i in range(nx):
         nxmin = int((ConfigData['PixelBoundaryLowerLeft'][0] - dat.xmin) / dat.dx) + GridsPerPixel * i
         nxmax = nxmin + GridsPerPixel
@@ -153,6 +154,8 @@ def FillSpotlist(ConfigData, run):
             nymax = nymin + GridsPerPixel
             electrons_in_pixel = dat.elec[nxmin:nxmax,nymin:nymax,:].sum()
             spotlist.data[i,j,0] = int(electrons_in_pixel)
+            TotalElectrons += int(electrons_in_pixel)
+    print "%d total electrons in image"%TotalElectrons
     return spotlist
 
 #****************MAIN PROGRAM*****************
