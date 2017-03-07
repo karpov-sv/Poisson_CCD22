@@ -153,7 +153,7 @@ def FillSpotlist(ConfigData, run):
             nymin = int((ConfigData['PixelBoundaryLowerLeft'][1] - dat.ymin) / dat.dy) + GridsPerPixel * j
             nymax = nymin + GridsPerPixel
             electrons_in_pixel = dat.elec[nxmin:nxmax,nymin:nymax,:].sum()
-            spotlist.data[i,j,0] = int(electrons_in_pixel)
+            spotlist.data[j,i,0] = int(electrons_in_pixel)
             TotalElectrons += int(electrons_in_pixel)
     print "%d total electrons in image"%TotalElectrons
     return spotlist
