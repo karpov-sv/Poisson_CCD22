@@ -29,6 +29,7 @@ SOURCES       = poisson.cpp \
 		multigrid.cpp \
 		array3d.cpp \
 		array2d.cpp \
+		array2dint.cpp \
 		polygon.cpp \
 		fileio.cpp \
 		hdf5write.cpp \
@@ -37,6 +38,7 @@ OBJECTS       = poisson.o \
 		multigrid.o \
 		array3d.o \
 		array2d.o \
+		array2dint.o \
 		polygon.o \
 		fileio.o \
 		hdf5write.o \
@@ -85,6 +87,7 @@ poisson.o: poisson.cpp poisson.h \
 		hdf5read.h \
 		array3d.h \
 		array2d.h \
+		array2dint.h \
 		polygon.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o poisson.o poisson.cpp
 
@@ -95,6 +98,7 @@ multigrid.o: multigrid.cpp multigrid.h \
 		hdf5read.h \
 		array3d.h \
 		array2d.h \
+		array2dint.h \
 		polygon.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o multigrid.o multigrid.cpp
 
@@ -105,6 +109,10 @@ array3d.o: array3d.cpp array3d.h \
 array2d.o: array2d.cpp array2d.h \
 		globals.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o array2d.o array2d.cpp
+
+array2dint.o: array2dint.cpp array2dint.h \
+		globals.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o array2dint.o array2dint.cpp
 
 polygon.o: polygon.cpp polygon.h \
 		globals.h

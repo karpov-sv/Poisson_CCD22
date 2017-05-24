@@ -22,9 +22,6 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
   dzp = (zmax - zmin) / (double) nz;
   x = new double[nx]; y = new double[ny]; z = new double[nz]; zp = new double[nz]; zplus = new double[nz]; zminus = new double[nz]; dzpdz = new double[nz]; zpz = new double[nz]; zmz = new double[nz], zw = new double[nz];
   data = new double[nx * ny * nz];
-  Ckmin = new int[nx];
-  Vkmin = new int[nx];
-  TR = new double[nx];  
   
   // With the non-linear z-axis, it is useful to calculate a number of coordinates
   for (k=0; k<nz; k++)
@@ -85,7 +82,6 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
   for (i=0; i<nx; i++)
     {
       x[i] = xmin + dx/2.0 + (double) i * dx;	  
-      Ckmin[i] = 0; Vkmin[i] = 0; TR[i] = 0.0;
       for (j=0; j<ny; j++)
 	{
 	  for (k=0; k<nz; k++)
@@ -109,9 +105,6 @@ Array3D::~Array3D()
   delete[] zminus;
   delete[] dzpdz;
   delete[] data;
-  delete[] Ckmin;
-  delete[] Vkmin;
-  delete[] TR;  
 }
 
 double Array3D::PyramidalKernel3D(double deltax, double deltay, double deltaz)
@@ -175,12 +168,14 @@ double Array3D::ZP(double z)
 
 double Array3D::DZPDz(double z)
 {
-  return - (nzexp - 1.0) * (nzexp + 1.0) / nzexp * pow(z / sensorthickness, 1.0 / nzexp) + nzexp;
+  if (z < 1.0E-6) return nzexp;
+  else return - (nzexp - 1.0) * (nzexp + 1.0) / nzexp * pow(z / sensorthickness, 1.0 / nzexp) + nzexp;
 }
 
 double Array3D::D2ZPDz2(double z)
 {
-  return - (nzexp - 1.0) * (nzexp + 1.0) / (nzexp * nzexp) * pow(z / sensorthickness, 1.0 / nzexp - 1.0) / sensorthickness;
+  if (z < 1.0E-6) return 0.0;
+  else return - (nzexp - 1.0) * (nzexp + 1.0) / (nzexp * nzexp) * pow(z / sensorthickness, 1.0 / nzexp - 1.0) / sensorthickness;
 }
 
 double Array3D::Z(double zp)

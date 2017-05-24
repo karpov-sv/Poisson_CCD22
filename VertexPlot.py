@@ -135,9 +135,10 @@ Nx = ConfigData["PixelBoundaryNx"]
 Ny = ConfigData["PixelBoundaryNy"]
 XCenter = ConfigData["FilledPixelCoords_0_0"][0]
 YCenter = ConfigData["FilledPixelCoords_0_0"][1]
-PixelSize = ConfigData["PixelSize"]
-NxCenter = int((XCenter - ConfigData["PixelBoundaryLowerLeft"][0]) / PixelSize)
-NyCenter = int((YCenter - ConfigData["PixelBoundaryLowerLeft"][1]) / PixelSize)
+PixelSizeX = ConfigData["PixelSizeX"]
+PixelSizeY = ConfigData["PixelSizeY"]
+NxCenter = int((XCenter - ConfigData["PixelBoundaryLowerLeft"][0]) / PixelSizeX)
+NyCenter = int((YCenter - ConfigData["PixelBoundaryLowerLeft"][1]) / PixelSizeY)
 Area_0 = 100.0
 NumAngles = 4 * ConfigData["NumVertices"] + 4
 NumElec = ConfigData["CollectedCharge_0_0"]
@@ -155,17 +156,17 @@ filename = outputfiledir + '/' + outputfilebase +'_%d_Vertices'%run + '.dat'
 
 (vx, vy) = ReadVertexFile(filename, Nx, Ny, NumAngles)
 
-LineXMin = XCenter - (PlotDelta + 0.5) * PixelSize
-LineXMax = XCenter + (PlotDelta + 0.5) * PixelSize
-LineYMin = YCenter - (PlotDelta + 0.5) * PixelSize
-LineYMax = YCenter + (PlotDelta + 0.5) * PixelSize
+LineXMin = XCenter - (PlotDelta + 0.5) * PixelSizeX
+LineXMax = XCenter + (PlotDelta + 0.5) * PixelSizeX
+LineYMin = YCenter - (PlotDelta + 0.5) * PixelSizeY
+LineYMax = YCenter + (PlotDelta + 0.5) * PixelSizeY
 
 title("Pixel Vertices: %d e-"%NumElec)
 
 for i in range(NxCenter-PlotDelta, NxCenter+PlotDelta+1):
-    plot([XCenter+PixelSize*(i-NxCenter-0.5), XCenter+PixelSize*(i-NxCenter-0.5)], [LineYMin, LineYMax], color = 'black', ls = '--')
+    plot([XCenter+PixelSizeX*(i-NxCenter-0.5), XCenter+PixelSizeX*(i-NxCenter-0.5)], [LineYMin, LineYMax], color = 'black', ls = '--')
 for j in range(NyCenter-PlotDelta, NyCenter+PlotDelta+1):
-    plot([LineXMin, LineXMax], [YCenter+PixelSize*(j-NyCenter-0.5), YCenter+PixelSize*(j-NyCenter-0.5)], color = 'black', ls = '--')
+    plot([LineXMin, LineXMax], [YCenter+PixelSizeY*(j-NyCenter-0.5), YCenter+PixelSizeY*(j-NyCenter-0.5)], color = 'black', ls = '--')
 
 
 for i in range(NxCenter-PlotDelta, NxCenter+PlotDelta+1):
@@ -174,7 +175,7 @@ for i in range(NxCenter-PlotDelta, NxCenter+PlotDelta+1):
             textcolor = 'red'
         else:
             textcolor = 'black'
-        text(XCenter+PixelSize*(i-NxCenter-0.2), YCenter+PixelSize*(j-NyCenter-0.1), "%.4f"%area[i,j], color = textcolor, fontsize = 12/PlotDelta, fontweight = 'bold')
+        text(XCenter+PixelSizeX*(i-NxCenter-0.2), YCenter+PixelSizeY*(j-NyCenter-0.1), "%.4f"%area[i,j], color = textcolor, fontsize = 12/PlotDelta, fontweight = 'bold')
         x = []
         y = []
         for k in range(NumAngles):
