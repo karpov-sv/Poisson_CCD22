@@ -4,6 +4,7 @@
 \usepackage{amssymb}
 \usepackage{url}
 \usepackage{slashed}
+\usepackage{comment}
 \long\def\comment#1{}
 
 % uncomment if don't want page numbers
@@ -85,78 +86,63 @@ Running the python plotting routines also requires that you install h5py so that
 
 If you run the forward modeling code in order to generate brighter-fatter plots as described in the bfrun1 example below, you will also need to build the forward.so Python extension.  Instructions for this are in the forward\_model\_varying\_i directory.
 
+
+
 \section{Changes in Most Recent Version}
 
-This 'hole17' branch is a major revision.  It is still under development and may contain bugs.  However, it was used to create all of the plots in the document docs/PACCD\_Paper\_2Feb17.pdf, so it is reasonably mature.
-
-\begin{itemize}
-  \item {\bf Mobile Charges:} The treatment of mobile charges, both holes and electrons, is the biggest change in the version.  Mobile charges are now dealt with using the Quasi-Fermi level formalism.  This self consistently solves for the potential and mobile charge densities in regions containing mobile charges.  The hole-containing regions in these devices are a spatially continuous region which are in quasi-equilibrium, so a single hole Quasi-Fermi level serves to set the holes densities throughout the device.  This is set in the .cfg ffile by the parameter qfh.  Setting this parameter to a value of 0.4 Volts will set the potential in the hole containing region to be near 0 Volts, which is appropriate for the ITL devices.  For the electrons, a different value of the electron Quasi-Fermi level is set in each pixel based on the number of electrons in this pixel.  Because the relation between the electron Quasi-Fermi level and the number of electrons in the pixel is a compelx non-linear relationship, the code builds a look-up table for this.  Building this look-up table is controlled by the BuildQFe, QFeMin, QFeMax, and NQFe parameters.  This only need to be done each time the CCD parameters (voltages, dopings, etc.) are changed.  If BuildQFeLookup = 0, the code will look for the *QFe.dat file to read in.
-
-  \item {\bf Geometry of gate and field oxide regions:} The code now has a more realistic gate and field oxide geometry, controlled by the GateOxide, FieldOxide, and FieldOxideTaper parameters.
-
-\end{itemize}
+This 'hole18' branch is a minor revision to the 'hole17' branch revision.  It is still under development and may contain bugs.  However, the 'hole17' code was used to create all of the plots in the document docs/PACCD\_Paper\_2Feb17.pdf, so it is reasonably mature. The 'hole18' branch contains minor changes to allow simulation of the chip edge, notably to allow the parameter QFh to be different in different locations.
 
 \section{Examples}
 
-There are a total of four examples included with the code.  Each example is in a separate directory in the data directory, and has a configuration file of the form *.cfg. The parameters in the *.cfg files are commented to explain(hopefully) the purpose of each parameter. Python plotting routines are included with instructions below on how to run the plotting routines and the expected output.  The plot outputs are placed in the data/*run*/plots files, so you can see the expected plots without having to run the code.  If you edit the .cfg files, it is likely that you will need to customize the Python plotting routines as well.
+There are a total of seven examples included with the code.  Each example is in a separate directory in the data directory, and has a configuration file of the form *.cfg. The parameters in the *.cfg files are commented to explain(hopefully) the purpose of each parameter. Python plotting routines are included with instructions below on how to run the plotting routines and the expected output.  The plot outputs are placed in the data/*run*/plots files, so you can see the expected plots without having to run the code.  If you edit the .cfg files, it is likely that you will need to customize the Python plotting routines as well.
 
 \begin{itemize}
-  \item Example 0: data/bfrun\_0/bf.cfg
+  \item Example 0: data/run0/bf.cfg
     \begin{enumerate}
-      \item Purpose: A simple 9x9 grid of pixels.  The central pixel contains 80,000 electrons with an assumed charge density (adjustable in the .cfg file).  No electron tracking or pixel boundary plotting is done.  This is a lower resolution run that will run quickly.
-      \item Syntax: src/Poisson data/bfrun\_0/bf.cfg
-      \item Expected run time: $\rm \approx 1 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/bfrun\_0/bf.cfg 0
-      \item Expected plot run time: $\rm <1 minute$.
-      \item Plot output: Assumed boundary potentials and charge distribution as well as several views of the potential solution. 
-      \item Plot Syntax: python ChargePlots\_27Jan17.py data/bfrun\_0/bf.cfg 0 3
-      \item Expected plot run time: $\rm \approx 1 minute$.
-      \item Plot output: Detailed 3D Charge Distributions.
+      \item Purpose: This is a 'quick and dirty' file that generates a 9x9 grid of pixels with the center pixel having 80,000 electrons, at lower resolution.  It should run in 10-15 minutes.
     \end{enumerate}
 
-  \item Example 1: data/bfrun\_1/bf.cfg
+  \item Example 1: data/run1/bf.cfg
     \begin{enumerate}
-      \item Purpose: Same as example 0, but at higher resolution.
-      \item Syntax: src/Poisson data/bfrun\_1/bf.cfg
-      \item Expected run time: $\rm \approx 30 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/bfrun\_1/bf.cfg 0
-      \item Expected plot run time: $\rm <1 minute$.
-      \item Plot output: Assumed boundary potentials and charge distribution as well as several views of the potential solution. 
-      \item Plot Syntax: python ChargePlots\_27Jan17.py data/bfrun\_1/bf.cfg 0 3
-      \item Expected plot run time: $\rm \approx 1 minute$.
-      \item Plot output: Detailed 3D Charge Distributions.
+      \item Purpose: This is the same as run0, but at higher resolution.  It will take several hours to run.
     \end{enumerate}
 
-      \item Example 2: data/bfrun\_2/bf.cfg
+  \item Example 2: data/run2/bf.cfg
     \begin{enumerate}
-      \item Purpose: Runs a B-F run, with 1,000,000 electrons in 101 10,000 electron steps.
-      \item Syntax: src/Poisson data/bfrun\_2/bf.cfg
-      \item Expected run time: $\rm \approx 3 hours$.
-      \item Plot Syntax: python Poisson\_Plots.py data/bfrun\_2/bf.cfg 0
-      \item Expected plot run time: $\rm \approx 2 minute$.
-      \item Plot Syntax: python ChargePlots\_27Jan17.py data/bfrun\_3/bf.cfg 0 9
-      \item Expected plot run time: $\rm <1 minute$.
-      \item Plot output: Detailed 3D Charge Distributions.
-
+      \item Purpose: Similar to run1, but a 13x13 pixel array, and calculates the pixel shapes, which is slow.  The file data/run2/BF\_0\_Vertices.dat is the most accurate simulation I have of the distorted pixel shapes, and produced the plot data/run2/plots/Area\_Corr\_19May17\_0.pdf, which is the best fit I have to the correlation measurements.
     \end{enumerate}
 
-  \item Example 3: data/bfrun\_3/bf.cfg
+  \item Example 3: data/run3/trans.cfg
     \begin{enumerate}
-      \item Purpose: Same as example 1, but calculates pixel areas and shapes.
-      \item Syntax: src/Poisson data/bfrun\_3/bf.cfg
-      \item Expected run time: $\rm \approx 150 minutes$.
-      \item Plot Syntax: python Poisson\_Plots.py data/bfrun\_3/bf.cfg 0
+      \item Purpose: This is a simulation of the output transistor, and was used to simulate the threshold volatge of this device for comparison to measurements.
+    \end{enumerate}
+
+  \item Example 4: data/run4/io.cfg
+    \begin{enumerate}
+      \item Purpose: This is a simulation of the entire IO region, including the output transistor, the reset gate, and the end of the serial chain.  It is still being developed, but seems to give sensible results.
+    \end{enumerate}
+
+  \item Example 5: data/run4/sat.cfg
+    \begin{enumerate}
+      \item Purpose: This is what was used to predict the onset of blooming in the array as a function of the parallel gate voltages.
+    \end{enumerate}
+
+  \item Example 6: data/edgerun1/edge.cfg
+    \begin{enumerate}
+      \item Purpose: To simulate astrometric shift at the edge of the pixel array.
+      \item Syntax: src/Poisson data/edgerun1/edge.cfg
+      \item Expected run time: $\rm \approx 90 minutes$.
+      \item Plot Syntax: python Poisson\_Plots\_Edge.py data/edgerun1/edge.cfg 0
       \item Expected plot run time: $\rm <1 minute$.
       \item Plot output: Assumed boundary potentials and charge distribution as well as several views of the potential solution. 
-      \item Plot Syntax: python ChargePlots\_27Jan17.py data/bfrun\_3/bf.cfg 0 3
+      \item Plot Syntax: python Pixel\_Shift\_29Aug17.py.py data/edgerun1/edge.cfg 0 
       \item Expected plot run time: $\rm \approx 1 minute$.
-      \item Plot output: Detailed 3D Charge Distributions.
-      \item Plot Syntax: python VertexPlot.py data/bfrun\_3/bf.cfg 0 2
-      \item Expected plot run time: $\rm \approx 1 minute$.
-      \item Plot output: Detailed Pixel shapes
+      \item Plot output: Pixel shift at array edge, electron paths at array edge, and simulated roll-off of spot location.
     \end{enumerate}
 
     
 \end{itemize}
+
+
 \end{document}
 

@@ -56,7 +56,7 @@ MultiGrid::MultiGrid(string inname) //Constructor
       SetFixedCharges(rho[n], Ckmin[n]); // Place fixed charges
     }
   //CountCharges(rho, elec, hole);
-  Set_QFh(QFh, qfh); // Set hole Quasi-Fermi level
+  Set_QFh(QFh); // Set hole Quasi-Fermi level
   time2 = time(NULL);
   setup_time = difftime(time2, time1);
   printf("Finished Setting ICs. Setup time = %.3f seconds.\n",setup_time);
@@ -240,6 +240,7 @@ MultiGrid::~MultiGrid() //Destructor
   delete[] FixedRegionDoping;
   delete[] FixedRegionOxide;
   delete[] FixedRegionQFe;
+  delete[] FixedRegionQFh;
   delete[] FixedRegionBCType;
   for (n=0; n<NumberofPixelRegions; n++)
     {
@@ -722,8 +723,8 @@ void MultiGrid::ReadConfigurationFile(string inname)
 	}
       if(!PixelBoundaryInsideAnyPixelRegion)
 	{
-	  printf("Pixel Boundary not Inside any Pixel Region!!!  Quitting\n");
-	  exit(0);
+	  printf("Pixel Boundary not Inside any Pixel Region!!!  This may cause errors!!!\n");
+	  //exit(0);
 	}
     }
 
@@ -732,7 +733,8 @@ void MultiGrid::ReadConfigurationFile(string inname)
   FixedRegionLowerLeft = new double*[NumberofFixedRegions];
   FixedRegionUpperRight = new double*[NumberofFixedRegions];
   FixedRegionVoltage = new double[NumberofFixedRegions];
-  FixedRegionQFe = new double[NumberofFixedRegions];  
+  FixedRegionQFe = new double[NumberofFixedRegions];
+  FixedRegionQFh = new double[NumberofFixedRegions];    
   FixedRegionDoping = new int[NumberofFixedRegions];
   FixedRegionOxide = new int[NumberofFixedRegions];
   FixedRegionBCType = new int[NumberofFixedRegions];
@@ -753,7 +755,8 @@ void MultiGrid::ReadConfigurationFile(string inname)
       FixedRegionLowerLeft[i] = GetDoubleList(inname, "FixedRegionLowerLeft_"+regionnum, 2, FixedRegionLowerLeft[i]);
       FixedRegionUpperRight[i] = GetDoubleList(inname, "FixedRegionUpperRight_"+regionnum, 2, FixedRegionUpperRight[i]);
       FixedRegionVoltage[i] = GetDoubleParam(inname, "FixedRegionVoltage_"+regionnum,0.0);
-      FixedRegionQFe[i] = GetDoubleParam(inname, "FixedRegionQFe_"+regionnum,100.0);      
+      FixedRegionQFe[i] = GetDoubleParam(inname, "FixedRegionQFe_"+regionnum,100.0);
+      FixedRegionQFh[i] = GetDoubleParam(inname, "FixedRegionQFh_"+regionnum,-100.0);            
       FixedRegionDoping[i] = GetIntParam(inname, "FixedRegionDoping_"+regionnum,0);
       FixedRegionOxide[i] = GetIntParam(inname, "FixedRegionOxide_"+regionnum,0);
       FixedRegionBCType[i] = GetIntParam(inname, "FixedRegionBCType_"+regionnum,0);
@@ -2348,10 +2351,10 @@ double MultiGrid::mu_Si (double E,double T)
   return((vm/Ec)/pow(1 + pow(fabs(E)/Ec,beta),1/beta));
 }
 
-void MultiGrid::Set_QFh(Array2D** QFh, double value)
+void MultiGrid::Set_QFh(Array2D** QFh)
 {
   //Set hole quasi-Fermi level in the region to give the desired number of electrons
-  int i, j, n, index;
+  int i, j, m, n, index;
   for (n=0; n<nsteps+1; n++)
     {
       for (i=0; i<QFh[n]->nx; i++)
@@ -2359,11 +2362,29 @@ void MultiGrid::Set_QFh(Array2D** QFh, double value)
 	  for (j=0; j<QFh[n]->ny; j++)
 	    {
 	      index = i + j * QFh[n]->nx;
-	      QFh[n]->data[index] = value;
+	      QFh[n]->data[index] = qfh;
 	    }
 	}
     }
-  printf("QFh = %.2f\n",value);
+  // Set QFh in the Fixed Voltage regions
+  for (m=0; m<NumberofFixedRegions; m++)
+    {
+      for (n=0; n<nsteps+1; n++)
+	{
+	  for (i=0; i<QFh[n]->nx; i++)
+	    {
+	      for (j=0; j<QFh[n]->ny; j++)
+		{
+		  index = i + j * QFh[n]->nx;
+		  if (QFh[n]->x[i] >= FixedRegionLowerLeft[m][0] && QFh[n]->x[i] <= FixedRegionUpperRight[m][0] && QFh[n]->y[j] >= FixedRegionLowerLeft[m][1] && QFh[n]->y[j] <= FixedRegionUpperRight[m][1])
+		    if (FixedRegionQFh[m] > -99.9)
+		      {
+			QFh[n]->data[index] = FixedRegionQFh[m];
+		      }
+		}
+	    }
+	}
+    }
   fflush(stdout);
   return;
   }

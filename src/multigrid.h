@@ -139,7 +139,8 @@ class MultiGrid
   double** FixedRegionLowerLeft;
   double** FixedRegionUpperRight;
   double* FixedRegionVoltage;
-  double* FixedRegionQFe;  
+  double* FixedRegionQFe;
+  double* FixedRegionQFh;    
   int* FixedRegionDoping;
   int* FixedRegionOxide;
   int* FixedRegionBCType;
@@ -233,7 +234,7 @@ class MultiGrid
   void FindCorner(double*, double*, ofstream&);
   void CalculatePixelAreas(int);
   double mu_Si (double, double);
-  void Set_QFh(Array2D**, double);
+  void Set_QFh(Array2D**);
   void Adjust_QFe(Array2D**, Array3D**, Array2DInt**);
   double ElectronQF(int, int);
   void WriteQFeLookup(string, string, string);
