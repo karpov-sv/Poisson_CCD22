@@ -41,12 +41,10 @@ class MultiGrid
 
   double w;		// Successive Over-Relaxation factor
   int ncycle;		// Number of SOR cycles at each resolution
-  int ncycle_loop;	// Number of SOR cycles in repeated loops  
   int iterations;	// Number of VCycles
   double NZExp;		// Non-linear z axis exponent
   
   int ScaleFactor;       // Power of 2 that sets the grid size
-  // ScaleFactor = 1 means grid size is 1.0 micron, 96 grids in the z-direction
   double PixelSizeX;      // Pixel size in microns
   double PixelSizeY;      // Pixel size in microns  
   double SensorThickness; // Thickness of the sensor in microns
@@ -75,10 +73,6 @@ class MultiGrid
   double Vbb;		// Back bias
   double Vparallel_lo;	// Parallel Low Voltage
   double Vparallel_hi;	// Parallel High Voltage
-  double Vserial_lo;	// Serial Low Voltage
-  double Vaverage;       // Average voltage on bottom
-  double Vchannelstop;   //  Voltage of undepleted channel stop
-  double Vscupper;       // Scupper voltage
 
   int Channelkmin;              // Bottom of channel region doping
   int Channelkmax;              // Top of channel region doping
@@ -98,9 +92,9 @@ class MultiGrid
   double* ChannelStopSigma;     	// Channel stop depth in microns
   double* ChannelStopPeak;       // Depth of peak of channel stop implant below silicon surface in microns
   double ChannelStopWidth;     	// Channel stop width in microns
+  double ChannelStopSurfaceCharge;  // Channel stop surface charge in cm^-2
   double ChannelSurfaceCharge;  // Channel surface charge in cm^-2
   double GateOxide;             // Gate oxide thickness in microns
-  double Gox_effective;         // Effective gate oxide thickness in microns (includes effect of discretization)
   double FieldOxide;            // Field oxide thickness in microns
   double FieldOxideTaper;       // Field oxide taper width in microns
   int NTaper0;                  // Field oxide taper in grid cells at finest grid
@@ -122,8 +116,10 @@ class MultiGrid
   double QFemin;             // Minimum QFe in table
   double QFemax;             // Maximum QFe in table
   double* QFeLookup;         // QFeLookup table
-  
+
+  int NumPhases;                          // Number of phases
   int CollectingPhases;                   // Number of collecting phases
+  int ElectronMethod;
 
   // Added dipoles
 
@@ -158,14 +154,14 @@ class MultiGrid
   int PixelBoundaryNx;
   int PixelBoundaryNy;
   int NumVertices;
-  double ElectronZ0Area;
+  int CalculateZ0;
   double ElectronZ0Fill;
+  double ElectronZ0Area;  
   double CCDTemperature;
   double DiffMultiplier;
   int NumDiffSteps;
   int EquilibrateSteps;
   int BottomSteps;
-  int ElectronAccumulation;      
   int SaturationModel;
   int NumElec;
   int NumSteps;
@@ -180,7 +176,8 @@ class MultiGrid
   int VerboseLevel;
   int SaveData;
   int SaveElec;
-
+  int SaveMultiGrids;
+  
 // Continuation info
 
   int Continuation;
@@ -204,7 +201,6 @@ class MultiGrid
   Array2D** QFh;         // Hole Quasi-Fermi level  
   Array2DInt** Ckmin;
   Array2DInt** Vkmin;
-  double qfe;
   double qfh;
   MultiGrid() {};
   MultiGrid(string);
@@ -216,12 +212,11 @@ class MultiGrid
   void SaveGridMulti();  
   void SetInitialVoltages(Array3D*, Array2DInt*, Array2DInt*);
   void SetFixedCharges(Array3D*, Array2DInt*);
-  double SOR_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2D*, Array2D*, Array2DInt*, Array2DInt*, double);
+  void FillElectronWells(Array3D*, Array3D*, Array2DInt*, double);  
+  double SOR_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2D*, Array2D*, Array2DInt*, Array2DInt*);
   double Error_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2DInt*);
-  void Restrict(Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2DInt*);
-  void Prolongate(Array3D*, Array3D*, Array2DInt*, Array2DInt*);
-  void VCycle_Inner(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2DInt**, Array2D**, Array2D**, Array2DInt**, Array2DInt**, double, int, int);
-  void VCycle_Zero(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2DInt**, Array2D**, Array2D**, Array2DInt**, Array2DInt**, double, int);  
+  void Prolongate(Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2DInt*, Array2DInt*);
+  void VCycle_Inner(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2DInt**, Array2D**, Array2D**, Array2DInt**, Array2DInt**, int, int);
   void WriteOutputFile(string, string, string, Array3D*);
   void ReadOutputFile(string, string, string, Array3D*);
   void Gradient(Array3D*, Array3D**);
@@ -242,7 +237,6 @@ class MultiGrid
   void ReadQFeLookup(string, string, string);
   void Setkmins(Array3D**, Array3D**, Array3D**, Array2DInt**, Array2DInt**);
   void CountCharges(Array3D**, Array3D**, Array3D**);
-  void FillRho(Array3D*, Array3D*);
   void Write3DFile(string, string, string, Array3D*);
   void Write2DFile(string, string, string, Array2D*);
   void Write2DIntFile(string, string, string, Array2DInt*);
