@@ -303,6 +303,10 @@ outputfiledir = ConfigData["outputfiledir"]
 # This holds all of the data
 dat = Array3dHDF5(outputfiledir, outputfilebase, run)
 
+# Create the output directory if it doesn't exist
+if not os.path.isdir(outputfiledir+"/plots"):
+    os.mkdir(outputfiledir+"/plots")
+
 PlotCenterPotentials(ConfigData, run)
 [array, pixel_edge_paths] = PlotElectronPaths(ConfigData, run)
 pixel_edge_vertices = PlotPixelEdges(ConfigData, run)

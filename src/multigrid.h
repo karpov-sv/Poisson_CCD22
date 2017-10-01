@@ -82,6 +82,7 @@ class MultiGrid
   int ChannelStopProfile;       // 0 = Square well, N = N Gaussian
   double ChannelStopDoping;	// Channel Stop doping
   double ChannelStopDepth;     	// Channel stop depth in microns
+  double ChannelStopSideDiff; 
   double ChannelDoping;		// Channel doping
   double ChannelDepth;		// Channel depth in microns
   double BackgroundDoping; 	// Background doping
@@ -98,6 +99,12 @@ class MultiGrid
   double FieldOxide;            // Field oxide thickness in microns
   double FieldOxideTaper;       // Field oxide taper width in microns
   int NTaper0;                  // Field oxide taper in grid cells at finest grid
+
+  // Tree Ring Parameters
+  int AddTreeRings;  
+  double TreeRingAngle;          // Rotation angle in  degrees
+  double TreeRingAmplitude;      // Amplitude in multiples of background charge
+  double TreeRingPeriod;         // Period of oscillations in microns
 
 // Pixel Regions
 
@@ -117,8 +124,9 @@ class MultiGrid
   double QFemax;             // Maximum QFe in table
   double* QFeLookup;         // QFeLookup table
 
-  int NumPhases;                          // Number of phases
-  int CollectingPhases;                   // Number of collecting phases
+  int NumPhases;             // Number of phases
+  int CollectingPhases;      // Number of collecting phases
+  double GateGap;            // Gap between gates in microns
   int ElectronMethod;
 
   // Added dipoles
@@ -170,6 +178,10 @@ class MultiGrid
   double Xoffset;
   double Yoffset;
 
+    // Fringe Parameters
+  double FringeAngle;          // Rotation angle in  degrees
+  double FringePeriod;         // Period of oscillations in microns
+
   string outputfilebase; // Output filename base
   string outputfiledir; // Output filename directory
 
@@ -210,7 +222,7 @@ class MultiGrid
   void BuildArrays(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2DInt**, Array2D**, Array2D**, Array2DInt**, Array2DInt**);
   void SaveGrid();
   void SaveGridMulti();  
-  void SetInitialVoltages(Array3D*, Array2DInt*, Array2DInt*);
+  void SetInitialVoltages(Array3D*, Array3D*, Array2DInt*, Array2DInt*, Array2DInt*);
   void SetFixedCharges(Array3D*, Array2DInt*);
   void FillElectronWells(Array3D*, Array3D*, Array2DInt*, double);  
   double SOR_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2D*, Array2D*, Array2DInt*, Array2DInt*);
@@ -223,6 +235,7 @@ class MultiGrid
   double GetElectronInitialZ();
   void Trace(double*, int, bool, double, ofstream&);
   void TraceSpot(int);
+  void TraceFringes(int);  
   void TraceGrid(int);
   void TraceRegion(int);
   void FindEdge(double*, double, ofstream&);
@@ -240,5 +253,5 @@ class MultiGrid
   void Write3DFile(string, string, string, Array3D*);
   void Write2DFile(string, string, string, Array2D*);
   void Write2DIntFile(string, string, string, Array2DInt*);
-  void SetCharge(Array3D*, Array2DInt*, int, int, int);
+  void SetCharge(Array3D*, Array2DInt*, int, int, int, double);
 };

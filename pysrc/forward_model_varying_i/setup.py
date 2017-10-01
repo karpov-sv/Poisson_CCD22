@@ -6,10 +6,10 @@ from distutils.extension import Extension
 import os
 from subprocess import *
 
-include_dirs = ["/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7/","/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core/include","."]
+#include_dirs = ["/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7/","/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core/include","."]
 
 #import numpy
-#include_dirs = [numpy.get_include(), '.'] # This works but get deprecated warning
+include_dirs = [numpy.get_include(), '.'] # This works but get deprecated warning
 
 library_dirs=['/usr/local/lib']
 libraries=[]

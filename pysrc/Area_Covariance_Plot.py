@@ -28,7 +28,7 @@ NyCenter = 4
 Area_0 = 99.9972
 
 areafilename = outputfiledir + '/' + outputfilebase +'_%d_Area.dat'%run
-datafilename = outputfiledir + '/corr_meas.txt'
+datafilename = 'measurements/corr_meas.txt'
 [area,sim] = ReadAreaFile(areafilename, Nx, Ny, NxCenter, NyCenter, Area_0)
 [data,sigma] = ReadCorrData(datafilename)
 

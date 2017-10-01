@@ -99,7 +99,7 @@ def ReadConfigFile(filename):
 
 def BuildPlotArray(dat, plotdata, axis, nxmin, nxmax, nymin, nymax, nzmin, nzmax, ZMult, ForceZero, Vph, Vpl, cmap):
     # This builds a 2D array for use with the charge plotting
-    plotarray = ma.masked_array(zeros([nxmax-nxmin+1,nymax-nymin+1]))
+    plotarray = zeros([nxmax-nxmin+1,nymax-nymin+1])
     dxx = zeros([nxmax-nxmin+1])
     dyy = zeros([nymax-nymin+1])
     for i in range(nxmax-nxmin+1):
@@ -132,12 +132,12 @@ def BuildPlotArray(dat, plotdata, axis, nxmin, nxmax, nymin, nymax, nzmin, nzmax
 
     num_levels = 100
     if ForceZero:
-        pdata = plotarray.clip(0.0,1.0E20)
-        ndata = plotarray.clip(-1.0E30,0.0)
+        pdata = plotarray.clip(0.0,1.0E12)
+        ndata = plotarray.clip(-1.0E12,0.0)
         plotarray = (pdata/pdata.max()-ndata/ndata.min())
     vmax = plotarray.max()*1.01 + 0.01
     vmin = plotarray.min()*1.01 - 0.01
-    levels = np.linspace(vmin, vmax, num_levels)    
+    levels = linspace(vmin, vmax, num_levels)    
 
     for i in range(nxmax-nxmin):
         for j in range(nymax-nymin):
@@ -191,36 +191,50 @@ def BuildPlotSlice(dat, plotdata, axis, nxmin, nxmax, nymin, nymax, nzmin, nzmax
                     plotslice[i] += plotdata[nymin+j,nzmin+k,nxmin+i]                
     return [plotslice, xpoints]
 
-def ChargeDepth(dat, filename, nxcenter, nycenter, dnx, dny, nzmax):
+def ChargeDepth(dat, filename, nxcenter, nycenter, dnx, dny, nzmax, recomb_factor = 1.0):
     # Calculates the charges in a region and the average depth of the electron cloud
-    file = open(filename,"w")
+    # The recomb_factor removes a fraction of electrons which have reached the interface
+    if filename is not  None:
+        file = open(filename,"w")
     nzxmin = nxcenter - dnx
     nzxmax = nxcenter + dnx
     nzymin = nycenter - dny
     nzymax = nycenter + dny
     ncenter = 0.0
     nzcenter = 0.0
-
+    ncenter_int = 0.0
+    # Find Ckmin
+    for nz in range(nzmax):
+        if dat.rho[nxcenter, nycenter, nz] > 1.0E-12:
+            Ckmin = nz
+            break
     Holes_in_region = 0.0    
     Below_kmin = 0.0
     for nx in range(nzxmin, nzxmax+1):
         for ny in range(nzymin, nzymax+1):
             for nz in range(nzmax):
                 if dat.Elec[nx,ny,nz] > 0.1:
-                    ncenter += dat.Elec[nx,ny,nz]
-                    nzcenter += dat.z[nz] * dat.Elec[nx,ny,nz]
+                    if nz == Ckmin:
+                        ncenter_int += dat.Elec[nx,ny,nz]
+                        ncenter += dat.Elec[nx,ny,nz] * recomb_factor
+                        nzcenter += dat.z[nz] * dat.Elec[nx,ny,nz] * recomb_factor
+                    else:
+                        ncenter += dat.Elec[nx,ny,nz]
+                        nzcenter += dat.z[nz] * dat.Elec[nx,ny,nz]
                 if dat.Hole[nx,ny,nz] > 0.1:
                     Holes_in_region += dat.Hole[nx,ny,nz]                    
     if ncenter > 0:
         meanz = nzcenter / ncenter
     else:
         meanz = 0.0
+    print "Electrons at Interface = %.1f\n"%ncenter_int
     print "Electrons In Region = %.1f, Mean z = %.3f microns\n"%(ncenter, meanz)
     print "Holes In Region = %.1f\n"%Holes_in_region   
     print "Total Electrons = %.1f\n"%dat.Elec.sum()
-    file.write("Electrons in Region = %.1f, Mean z = %.3f microns\n"%(ncenter, meanz))
-    file.close()
-    return
+    if filename is not  None:
+        file.write("Electrons in Region = %.1f, Mean z = %.3f microns\n"%(ncenter, meanz))
+        file.close()
+    return ncenter
 
 def ReadCorrData(filename):
     # This reads the correlation data file
@@ -330,7 +344,7 @@ def New_BF_Cfg_File(incfgfile, outcfgfile, newrun):
     # and assigns a random offset value within the central pixel
     ConfigData = ReadConfigFile(incfgfile)
     lines = OpenFile(incfgfile)
-    dirbase = ConfigData['outputfiledir'].split('run')
+    dirbase = ConfigData['outputfiledir'].split('bfrun')
     xoff = -5.0 + 10.0 * rand()
     yoff = -5.0 + 10.0 * rand()
     for i, line in enumerate(lines):
@@ -346,7 +360,7 @@ def New_BF_Cfg_File(incfgfile, outcfgfile, newrun):
             continue
         try:
             if line.split()[0] == 'outputfiledir':
-                lines[i] = 'outputfiledir = '+dirbase[0]+'run%d\n'%newrun
+                lines[i] = 'outputfiledir = '+dirbase[0]+'bfrun_%d\n'%newrun
         except:
             continue
     newcfgfile = open(outcfgfile, 'w')
@@ -360,7 +374,7 @@ def New_Trans_Cfg_File(incfgfile, outcfgfile, newrun, Vg):
     # to simulate a transistor I-V curve
     ConfigData = ReadConfigFile(incfgfile)
     lines = OpenFile(incfgfile)
-    dirbase = ConfigData['outputfiledir'].split('run')
+    dirbase = ConfigData['outputfiledir'].split('transrun')
     for i, line in enumerate(lines):
         try:
             if line.split()[0] == 'FixedRegionVoltage_11':
@@ -374,9 +388,52 @@ def New_Trans_Cfg_File(incfgfile, outcfgfile, newrun, Vg):
             continue
         try:
             if line.split()[0] == 'outputfiledir':
-                lines[i] = 'outputfiledir = '+dirbase[0]+'run%d\n'%newrun
+                lines[i] = 'outputfiledir = '+dirbase[0]+'transrun_%d\n'%newrun
         except:
             continue
+    newcfgfile = open(outcfgfile, 'w')
+    for line in lines:
+        newcfgfile.write(line)
+    newcfgfile.close()
+    return 
+
+def New_Sat_Cfg_File(incfgfile, outcfgfile, newrun, Vph, Vpl):
+    # This increments the run number, the parallel voltages
+    # and the charges to simulate a saturationcurve
+    qmax = int(15000 * (Vph - Vpl))
+    qmin = qmax / 4
+    qstep = qmax * 15 / 100
+
+    ConfigData = ReadConfigFile(incfgfile)
+    lines = OpenFile(incfgfile)
+    dirbase = ConfigData['outputfiledir'].split('satrun')
+    for i, line in enumerate(lines):
+        try:
+            if line.split()[0] == 'Vparallel_lo':
+                lines[i] = 'Vparallel_lo = '+str(Vpl)+'\n'
+        except:
+            continue
+        try:
+            if line.split()[0] == 'Vparallel_hi':
+                lines[i] = 'Vparallel_hi = '+str(Vph)+'\n'
+        except:
+            continue
+        try:
+            if line.split()[0] == 'outputfiledir':
+                lines[i] = 'outputfiledir = '+dirbase[0]+'satrun_%d\n'%newrun
+        except:
+            continue
+        # Now set the 6 charges to give a reasonable BarrierHeight curve
+        for m in range(6):
+            for n in range(3):
+                index = 3 * m + n
+                charge = qmin + m * qstep
+                try:
+                    if line.split()[0] == 'CollectedCharge_0_%d'%index:
+                        lines[i] = 'CollectedCharge_0_%d = %d\n'%(index, charge)
+                except:
+                    continue
+
     newcfgfile = open(outcfgfile, 'w')
     for line in lines:
         newcfgfile.write(line)
@@ -404,7 +461,7 @@ def ReadSIMSData():
 
     epsilon_si = 11.7 * 8.85E-14
     qe = 1.6E-19
-    boron_wb = xlrd.open_workbook('C0HVL528x02_B site.xls')
+    boron_wb = xlrd.open_workbook('measurements/C0HVL528x02_B site.xls')
     boron_data = boron_wb.sheet_by_name('Processed data')
     boron_conc = []
     boron_depth = []
@@ -417,7 +474,7 @@ def ReadSIMSData():
         except:
             continue
 
-    phos_wb = xlrd.open_workbook('C0HVL528L05_P Site.xls')
+    phos_wb = xlrd.open_workbook('measurements/C0HVL528L05_P Site.xls')
     phos_data = phos_wb.sheet_by_name('Processed data')
     phos_conc = []
     phos_depth = []
@@ -460,8 +517,6 @@ def Read_STA3800_IV_Data(filename):
     return [Vgs, Ids]
 
 
-
-
 def Area(xl, xh, yl, yh, sigmax, sigmay, Imax):
     # Calculates how much of a 2D Gaussian falls within a rectangular box
     ssigx = sqrt(2) * sigmax
@@ -469,121 +524,3 @@ def Area(xl, xh, yl, yh, sigmax, sigmay, Imax):
     I = (erf(xh/ssigx)-erf(xl/ssigx))*(erf(yh/ssigy)-erf(yl/ssigy))
     return Imax * I / 4.0
 
-
-
-
-
-
-
-"""
-def FOM(params):
-    global spotlist
-    [sigmax, sigmay] = params
-    result = forward.forward(spotlist,sigmax,sigmay)
-    return result
-
-
-def FillSpotlist(run, Numspots):
-    global spotlist
-    # Note sigmas and offset are in pixels, not microns.
-    incfgfile = datadir+startdir+'bf.cfg'
-    InConfigData = ReadConfigFile(incfgfile)
-    # Postage Stamp size
-    nx = InConfigData['PixelBoundaryNx']
-    ny = InConfigData['PixelBoundaryNy']
-
-    outputfiledir = InConfigData['outputfiledir']
-    outputfilebase = InConfigData['outputfilebase']
-    GridsPerPixelX = InConfigData['GridsPerPixelX'] * InConfigData['ScaleFactor']
-    GridsPerPixelY = InConfigData['GridsPerPixelY'] * InConfigData['ScaleFactor']
-    PixelSizeX = InConfigData['PixelSizeX']
-    PixelSizeY = InConfigData['PixelSizeY']
-    ChannelStopWidth = InConfigData['ChannelStopWidth']
-    cspixels = int(ChannelStopWidth / PixelSizeX * float(GridsPerPixelX / 2)) + 1
-    stampxmin = -(int(nx/2)+0.5)
-    stampxmax = -stampxmin
-    stampymin = -(int(ny/2)+0.5)
-    stampymax = -stampymin
-
-    spotlist = Array2dSet(stampxmin,stampxmax,nx,stampymin,stampymax,ny,Numspots-1)
-
-    dirbase = outputfiledir.split('bfrun')
-    
-    for spot in range(Numspots-1): 
-        spotrun = spot + 1 # Don't include run 0 because it's different
-        dat = Array3dHDF5Elec(dirbase[0]+'bfrun_%d'%spotrun, outputfilebase, run)
-        cfgfile = dirbase[0]+'bfrun_%d'%spotrun+'/bf.cfg'
-        ConfigData = ReadConfigFile(cfgfile)
-
-        spotlist.xoffset[spot] = ConfigData['Xoffset'] / ConfigData['PixelSizeX']
-        spotlist.yoffset[spot] = ConfigData['Yoffset'] / ConfigData['PixelSizeY']
-
-        for i in range(nx):
-            nxmin = ((ConfigData['PixelBoundaryLowerLeft'][0] - dat.xmin) / dat.dx) + GridsPerPixelX * i
-            nxmax = nxmin + GridsPerPixelX
-            for j in range(ny):
-                nymin = ((ConfigData['PixelBoundaryLowerLeft'][1] - dat.ymin) / dat.dy) + GridsPerPixelY * j
-                nymax = nymin + GridsPerPixelY
-                electrons_in_pixel = dat.elec[(nxmin+cspixels):(nxmax-cspixels),nymin:nymax,:].sum()
-                #print "i = %d, j = %d, nxmin = %d, nymin = %d, electron = %d"%(i,j,nxmin,nymin,electrons_in_pixel)
-                spotlist.data[i,j,spot] = electrons_in_pixel
-
-    param0 = [1.00, 1.00]
-    args = ()
-    Result = fmin_powell(FOM, param0, args)
-    
-    imax = spotlist.imax.mean()
-    ADU_correction = Area(-0.5,0.5,-0.5,0.5,Result[0],Result[1],1.0)
-
-    spotdata = [run, Result[0], Result[1], imax * ADU_correction]
-    print spotdata
-    mpi.send(spotdata, Numspots - 1, tag = run)
-    return
-
-
-def PlotSpotlist(Numruns, Numspots, imaxs, sigmaxs, sigmayx):
-    global spotlist
-    incfgfile = datadir+startdir+'bf.cfg'
-    InConfigData = ReadConfigFile(incfgfile)
-    # Postage Stamp size
-    nx = InConfigData['PixelBoundaryNx']
-    ny = InConfigData['PixelBoundaryNy']
-    file = open("bf.txt","w")
-    figure()
-    title("Baseline - Sigmax = Sigmay = 1.0, Offsets=random, With Diffusion")
-    scatter(imaxs, sigmaxs, color = 'green', lw = 2, label = 'Sigma-x')
-    scatter(imaxs, sigmays, color = 'red', lw = 2, label = 'Sigma-y')
- 
-    slope, intercept, r_value, p_value, std_err = stats.linregress(imaxs[4:-1],sigmaxs[4:-1])
-    xplot=linspace(0.0,150000.0,100)
-    yplot = slope * xplot + intercept
-    plot(xplot, yplot, color='blue', lw = 2, ls = '--')
-    txslope = slope * 100.0 * 50000.0
-    file.write("X Slope = %.2f %% per 50K e-, Intercept = %.3f\n"%(txslope,intercept))
-    slope, intercept, r_value, p_value, std_err = stats.linregress(imaxs[4:-1],sigmays[4:-1])
-    xplot=linspace(0.0,150000.0,100)
-    yplot = slope * xplot + intercept
-    plot(xplot, yplot, color='black', lw = 2, ls = '--')
-    tyslope = slope * 100.0 * 50000.0
-    file.write("Y Slope = %.2f %% per 50K e-, Intercept = %.3f\n"%(tyslope,intercept))
-    xlabel('Central Peak(electrons)')
-    ylabel('Sigma (Pixels)')
-    legend(loc= 'lower right')
-    ylim(0.95, 1.10)
-    xlim(0.0,150000.0)
-    xticks([0.0,50000,100000])
-    xslope_meas = 0.71
-    xslope_sigma = 0.09
-    yslope_meas = 0.94
-    yslope_sigma = 0.07
-    chi_squared = (((txslope - xslope_meas) / xslope_sigma)**2 + ((tyslope - yslope_meas) / yslope_sigma)**2) / 2.0
-    text(10000.0,1.08,"%d Simulated spots"%Numspots, fontsize=16, color='blue')
-    text(10000.0,1.07,"X Slope = %.2f %% per 50K e-, Data = %.2f +/- %.2f"%(txslope, xslope_meas, xslope_sigma), fontsize=16, color='blue')
-    text(10000.0,1.06,"Y Slope = %.2f %% per 50K e-, Data = %.2f +/- %.2f"%(tyslope, yslope_meas, yslope_sigma), fontsize=16, color='blue')
-    text(10000.0,1.05,"$\chi^2$ = %.2f"%chi_squared, fontsize=16, color='blue')
-
-    savefig(datadir+startdir+"plots/BF_Sim_%d_%d.pdf"%(Numruns,Numspots))
-    file.close()
-    return
-
-"""

@@ -75,6 +75,7 @@ for i in range(NumMultis):
 subplot(1,2,2)
 text(2.0, -5.0-1.0*NumMultis, "Calculated DeltaPhi = %f"%DeltaPhi_calc, fontsize = 8)
 print "Calculated DeltaPhi = %f"%DeltaPhi_calc
-legend(loc = 'upper right')
+subplot(1,2,1)
+legend(loc = 'upper left')
 savefig(outputfiledir+"/plots/"+outputfilebase+"_Grid_Comparison.pdf")
 

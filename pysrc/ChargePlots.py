@@ -33,7 +33,7 @@ GridsPerPixelX = ConfigData["GridsPerPixelX"]
 GridsPerPixelY = ConfigData["GridsPerPixelY"]
 
 ZMult = 2.0
-kmax = int(dat.Elec.shape[2]*0.90)
+kmax = int(dat.Elec.shape[2]*0.70)
 nxx = dat.nx - 1
 nyy = dat.ny - 1
 nzz = dat.nz - 1
@@ -119,23 +119,23 @@ for i, plotdata in enumerate(plotdatas):
     ax6.yaxis.set_label_position("right")
     ax6.set_ylim(-4.0, 1.0)
     ax6.set_ylim(-4.0, 1.0)
-    ax6.text(3.0,-7.0,"Z-Axis has a %.1fX Scale Multiplier"%ZMult, fontsize = 18)
+    #ax6.text(3.0,-7.0,"Z-Axis has a %.1fX Mult"%ZMult, fontsize = 18)
     if i == 2:
         [plotslicen, xpoints] = BuildPlotSlice(dat, plotdata, 2, 0, kmax, nxcenter-1, nxcenter+2, nymin, nymax)
         [plotslicep, xpoints] = BuildPlotSlice(dat, plotdata, 2, 0, kmax, csxcenter-1, csxcenter+2, nymin, nymax)        
         ax6.plot(xpoints, log10(plotslicen/plotslicen.min()+1.0E-5), color='blue')
         ax6.plot(xpoints, log10(plotslicep/plotslicep.max()+1.0E-5), color='red')        
-        ax6.text(3.0,-8.0,"+ Charge in Red, - Charge in Blue", fontsize = 18)        
+        ax6.text(3.0,-9.0,"+ Charge in Red \n - Charge in Blue", fontsize = 18)        
     elif i == 3:
         [plotslicep, xpoints] = BuildPlotSlice(dat, plotdata, 2, 0, kmax, nxcenter-1, nxcenter+2, nymin, nymax)
         [plotslicen, xpoints] = BuildPlotSlice(dat, plotdata, 2, 0, kmax, csxcenter-1, csxcenter+2, nymin, nymax)        
         ax6.plot(xpoints, log10(plotslicen/plotslicen.min()+1.0E-5), color='blue')
         ax6.plot(xpoints, log10(plotslicep/plotslicep.max()+1.0E-5), color='red')        
-        ax6.text(3.0,-8.0,"+ Charge in Red, - Charge in Blue", fontsize = 18)        
+        ax6.text(3.0,-9.0,"+ Charge in Red \n -Charge in Blue", fontsize = 18)        
     else:
         [plotslice, xpoints] = BuildPlotSlice(dat, plotdata, 2, 0, kmax, nxmin, nxmax, nymin, nymax)
         ax6.plot(xpoints, log10(plotslice/plotslice.max()+1.0E-5))
     ax6.set_xlim(ax6.get_xlim()[::-1])
-    ax6.text(3.0,-9.0,"Oxide in yellow, Gates in green", fontsize = 18)        
+    ax6.text(3.0,-11.5,"Oxide in yellow \n Gates in green", fontsize = 18)        
     savefig(outputfiledir+"/plots/%sDistribution_New_%d.pdf"%(carriers[i],run))
     close(fig)

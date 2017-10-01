@@ -38,6 +38,10 @@ filename = outputfiledir + '/' + outputfilebase +'_%d_Area'%run + '.dat'
 
 [area,sim] = ReadAreaFile(filename, Nx, Ny, NxCenter, NyCenter, Area_0)
 
+# Create the output directory if it doesn't exist
+if not os.path.isdir(outputfiledir+"/plots"):
+    os.mkdir(outputfiledir+"/plots")
+
 figure()
 subplot(1,1,1,aspect = 1)
 title("Pixel Area: %d e-"%NumElec)
