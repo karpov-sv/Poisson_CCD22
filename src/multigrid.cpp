@@ -683,7 +683,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
 	{
 	  NumElec = GetIntParam(inname, "NumElec", 1000);	  
 	  FringeAngle = GetDoubleParam(inname, "FringeAngle", 0.0);	  
-	  FringePeriod = GetDoubleParam(inname, "FringeAngle", 0.0);	  
+	  FringePeriod = GetDoubleParam(inname, "FringePeriod", 0.0);	  
 	}
       
       for (i=0; i<NumberofPixelRegions; i++)
@@ -2222,9 +2222,9 @@ void MultiGrid::TraceSpot(int m)
 void MultiGrid::TraceFringes(int m)
 {
   // This traces a random set of starting electron locations in a fringe pattern
-  double x, y, xp, yp, z, boxx, boxy, FringeLength, theta;
+  double x, y, z, boxx, boxy, FringeLength, theta;
   double bottomcharge = 1.0 / (double)BottomSteps;
-  int n;
+  int n, ntrials;
   bool Reject;
   boxx = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
   boxy = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
@@ -2254,6 +2254,7 @@ void MultiGrid::TraceFringes(int m)
 	  LogPixelPaths = 0;
 	}
     }
+  ntrials = 0;
   for (n=0; n<NumElec; n++)
     {
       if (n%1000==0)
@@ -2263,13 +2264,14 @@ void MultiGrid::TraceFringes(int m)
       Reject=true;
       while (Reject) // Rejection sampling
 	{
+	  ntrials += 1;
 	  x = PixelBoundaryLowerLeft[0] + drand48() * boxx;
 	  y = PixelBoundaryLowerLeft[1] + drand48() * boxy;
-	  xp = x - Xoffset;
-	  yp = y - Yoffset;
-	  theta = atan(yp / xp);
-	  FringeLength = sqrt(xp*xp + yp*yp) * cos(theta - FringeAngle * pi / 180.0);
-	  if (1.0 + cos(FringeLength / FringePeriod * 2.0 * pi) > drand48()) Reject = false;
+	  theta = atan2(y, x);
+	  FringeLength = sqrt(x*x + y*y) * cos(theta - FringeAngle * pi / 180.0);
+
+	  if (1.0 + cos(FringeLength / FringePeriod * 2.0 * pi) > 2.0 * drand48()) Reject = false;
+	  //printf("x = %.2f, y = %.2f, FP = %.2f,FL = %.2f, th = %.2f, RR = %.2f\n",x,y,FringePeriod,FringeLength, theta*180.0/2.0, (1.0 + cos(FringeLength/FringePeriod*2.0*pi)));
 	}
       z = ElectronZ0Fill;
       point[0] = x;
@@ -2278,7 +2280,7 @@ void MultiGrid::TraceFringes(int m)
       Trace(point, BottomSteps, true, bottomcharge, file);
     }
   file.close();
-  printf("Finished writing grid file - %s\n",filename.c_str());
+  printf("Finished writing grid file - %s. n = %d, ntrials = %d\n",filename.c_str(),n, ntrials);
   fflush(stdout);
   delete[] point;
   LogPixelPaths = OldLogPixelPaths;  
