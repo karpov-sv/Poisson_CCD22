@@ -167,6 +167,7 @@ class MultiGrid
   double ElectronZ0Area;  
   double CCDTemperature;
   double DiffMultiplier;
+  double TopAbsorptionProb;
   int NumDiffSteps;
   int EquilibrateSteps;
   int BottomSteps;

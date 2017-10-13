@@ -22,9 +22,10 @@ MultiGrid::MultiGrid(string inname) //Constructor
   string underscore = "_";
   int n, m, m_init = 0;
   time1 = time(NULL);
-
   //Set the random number seed
-  srand48( (unsigned int) time(NULL));
+  unsigned int seed = time(NULL);
+  printf("Seed = %d\n",seed);
+  srand48(seed);
 
   // First we read in the configuration information
   ReadConfigurationFile(inname);
@@ -597,6 +598,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
   ktq = .026 * CCDTemperature / 300.0;//KBOLTZMANN * CCDTemperature / QE;
   printf("Intrinsic carrier concentration Ni = %g in code units, kT/q = %f Volts\n",Ni,ktq);
   DiffMultiplier = GetDoubleParam(inname, "DiffMultiplier", 1.0);
+  TopAbsorptionProb = GetDoubleParam(inname, "TopAbsorptionProb", 0.0);
   SaturationModel = GetIntParam(inname, "SaturationModel", 0);
   NumDiffSteps = GetIntParam(inname, "NumDiffSteps", 1);
   EquilibrateSteps = GetIntParam(inname, "EquilibrateSteps", 100);
@@ -684,6 +686,8 @@ void MultiGrid::ReadConfigurationFile(string inname)
 	  NumElec = GetIntParam(inname, "NumElec", 1000);	  
 	  FringeAngle = GetDoubleParam(inname, "FringeAngle", 0.0);	  
 	  FringePeriod = GetDoubleParam(inname, "FringePeriod", 0.0);	  
+	  Xoffset = GetDoubleParam(inname, "Xoffset", 0.0);
+	  Yoffset = GetDoubleParam(inname, "Yoffset", 0.0);
 	}
       
       for (i=0; i<NumberofPixelRegions; i++)
@@ -943,7 +947,7 @@ void MultiGrid::SetInitialVoltages(Array3D* phi, Array3D* eps, Array2DInt* BCTyp
   double GateVoltage[NumPhases], GapVoltage[NumPhases];
   // Potential on top
 
-  // These "fudge factors for epsilon in the gate gap are still experimental
+  // These "fudge factors" for epsilon in the gate gap are still experimental
   if (phi->dx > 1.20) eps_factor_gap = 10.0;
   else if (phi->dx > 0.60)  eps_factor_gap = 5.5;
   else if (phi->dx > 0.30)  eps_factor_gap = 2.0;
@@ -1180,7 +1184,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2DInt* Ckmin)
 			  continue; // If not in PixelRegion, continue
 			}
 		      SetCharge(rho, Ckmin, i, j, 1, 1.0);
-		      if (VerboseLevel >2 && j == (rho->ny-1)/2) printf("In SetFixedCharges. Nz = %d, i = %d, PixX = %d, Channel\n",rho->nz,i,PixX);
+		      if (VerboseLevel >2 && j == (rho->ny-1)/2) printf("In SetFixedCharges. Nz = %d, i = %d, PixX = %d, Ckmin = %d, Channel\n",rho->nz,i,PixX,Ckmin->data[i+j*rho->nx]);
 		    }
 		  continue;
 		}
@@ -1192,7 +1196,7 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2DInt* Ckmin)
 		    }
 		  // Channel Stop region
 		  SetCharge(rho, Ckmin, i, j, 2, TaperRatio);		  
-		  if (VerboseLevel >2 && j == (rho->ny-1)/2) printf("in SetFixedCharges. Nz = %d, i = %d, PixX = %d, Channel Stop\n",rho->nz,i,PixX);
+		  if (VerboseLevel >2 && j == (rho->ny-1)/2) printf("in SetFixedCharges. Nz = %d, i = %d, PixX = %d, Ckmin = %d, Channel Stop\n",rho->nz,i,PixX,Ckmin->data[i+j*rho->nx]);
 		}
 	    }
 	}
@@ -1728,16 +1732,18 @@ void MultiGrid::VCycle_Inner(Array3D** phi, Array3D** rho, Array3D** elec, Array
 	{
 	  if (PixelsFilled)
 	    {
+	      //printf("Pixels are already filled, nz = %d, i = %d\n",rho[i]->nz,i);
 	      // If the pixels have been filled at a coarser grid, Prolongate the electrons up to
 	      // the current grid and find the solution.
 	      FillElectronWells(rho[i], elec[i], Ckmin[i], 0.0);// Empty the wells 	  	  
 	      Prolongate(phi[i+1], phi[i], elec[i+1], elec[i], BCType[i], Vkmin[i], Ckmin[i]);
 	    }
-	  else if (GridsPerPixelX * ScaleFactor / (int)pow(2,i) < 8 || GridsPerPixelY * ScaleFactor / (int)pow(2,i) < 8)
+	  else if (GridsPerPixelX / (int)pow(2,i) < 8 || GridsPerPixelY / (int)pow(2,i) < 8)
 	    {
 	      // If the pixels haven't been filled, we don't want to fill them until the pixels
 	      // are at least 8 grid cells wide.  Otherwise, there is not yet a well-defined
 	      // collection region, and the electrons will "leak out".
+	      //printf("Pixel less than 8 grid cells, nz = %d, i = %d\n",rho[i]->nz,i);	      
 	      if (i < stepstart)
 		{
 		  // After we have done the corsest grid, we need to Prolongate the solution up and re-solve.
@@ -1752,6 +1758,7 @@ void MultiGrid::VCycle_Inner(Array3D** phi, Array3D** rho, Array3D** elec, Array
 	    }
 	  else
 	    {
+	      //printf("Pixel >= 8 grid cells, but not yet filled, nz = %d, i = %d\n",rho[i]->nz,i);	      	      
 	      if (i < stepstart)
 		{
 		  // This is the case when we are filling the pixels for the first time.
@@ -2039,9 +2046,9 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   int i, j, k, tracesteps = 0, tracestepsmax = 10000;
   bool ReachedBottom = false;
   double mu, E2, Emag, ve, vth, tau, Tscatt;
-  double theta, phiangle, zmin, zbottom;
+  double theta, phiangle, zmin, zmax, zbottom;
   double x, y, z;
-
+  zmax = SensorThickness;
   zmin = E[0]->z[Channelkmin] + 2.0 * FieldOxide; // Roughly the top of the collection region
   zbottom = E[0]->zmz[Channelkmin] + 0.01;
   x = point[0]; y = point[1]; z = point[2];
@@ -2084,6 +2091,16 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
       point[1] += (vth * sin(theta) * sin(phiangle) + E_interp[1] * ve) * Tscatt;
       point[2] += (vth * cos(theta) + E_interp[2] * ve) * Tscatt;
 
+      if (point[2] > zmax)
+	{
+	  // If the electron hits the top surface, it is reflected off,
+	  // but has some probability of recombining, defined TopAbsorptionProb.
+	  point[2] = 2.0 * zmax - point[2];
+	  if (drand48() > (1.0 - TopAbsorptionProb))
+	    {
+	      break;
+	    }
+	}
       if (point[2] < zmin && !ReachedBottom)
 	{
 	  ReachedBottom = true;
@@ -2265,14 +2282,15 @@ void MultiGrid::TraceFringes(int m)
       while (Reject) // Rejection sampling
 	{
 	  ntrials += 1;
-	  x = PixelBoundaryLowerLeft[0] + drand48() * boxx;
-	  y = PixelBoundaryLowerLeft[1] + drand48() * boxy;
+	  x = PixelBoundaryLowerLeft[0] + drand48() * boxx + Xoffset;
+	  y = PixelBoundaryLowerLeft[1] + drand48() * boxy + Yoffset;
 	  theta = atan2(y, x);
 	  FringeLength = sqrt(x*x + y*y) * cos(theta - FringeAngle * pi / 180.0);
 
 	  if (1.0 + cos(FringeLength / FringePeriod * 2.0 * pi) > 2.0 * drand48()) Reject = false;
-	  //printf("x = %.2f, y = %.2f, FP = %.2f,FL = %.2f, th = %.2f, RR = %.2f\n",x,y,FringePeriod,FringeLength, theta*180.0/2.0, (1.0 + cos(FringeLength/FringePeriod*2.0*pi)));
 	}
+      //if (n == 0) printf("x = %.2f, y = %.2f, FP = %.2f,FL = %.2f, th = %.2f, RR = %.2f\n",x,y,FringePeriod,FringeLength, theta*180.0/2.0, (1.0 + cos(FringeLength/FringePeriod*2.0*pi)));
+
       z = ElectronZ0Fill;
       point[0] = x;
       point[1] = y;
@@ -3211,7 +3229,7 @@ void MultiGrid::SetCharge(Array3D* rho, Array2DInt* Ckmin, int i, int j, int reg
       for (k=Ckmin->data[index]; k<kmax+1; k++)
 	{
 	  index2 = index + k * rho->nx * rho->ny;
-	  rho->data[index2] = Charge / ChargeDepth;
+	  rho->data[index2] += Charge / ChargeDepth;
 	}
     }
   else // N Gaussians

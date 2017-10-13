@@ -1,7 +1,7 @@
 # Poisson_CCD22 - 'hole20' branch
 Poisson solver for LSST CCDs
 Description of stand-alone Poisson solver.
-Craig Lage - UC Davis - 1-Oct-17
+Craig Lage - UC Davis - 13-Oct-17
 
 Description: This code is a simple grid-based Poisson's equation solver intended to simulate pixel distortion effects in thick fully-depleted CCD's to be used in the LSST digital camera.  The code builds a 3D rectilinear grid to represent a portion of the CCD, assigns the appropriate charge densities and applied potentials, then solves Poisson's equation using multi-grid methods.  A 360^3 grid, which is adequate for most purposes solves in less than one minute on a typical laptop.  Plotting routines are available to plot the potentials, E-Fields, Pixel shapes, and electron paths.  Installation instructions and instructions on how to run the many examples are in the README.pdf file.
 
@@ -23,3 +23,11 @@ This 'hole20' branch is a fairly major revision, with a number of new features. 
 * The plotting routines have been modified fairly extensively, and all placed in a pysrc subdirectory.  Most of the subroutines used by these plotting routines have been collected in the pysrc/pysubs.py file.  This has eliminated a lot of duplication that was present in the past.
 
 * A GateGap parameter has been added to study the impact of gaps between the gate electrodes.  This should be considered experimental at this time, and is not included in any of the examples below.
+
+Updates - 13Oct17:
+
+* Fixed a couple of minor things uncovered when simulating the E2V sensor.
+
+* The Xoffset and Yoffset are now added to the initial fringe electron positions.
+
+* Added code which deals with electrons which reach the top of the silicon (where the light comes in).  An electron which reaches here is reflected, with some probability of absorption, which is set by the parameter TopAbsorptionProb.  Default value is 0.0.
