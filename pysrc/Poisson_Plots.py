@@ -53,6 +53,11 @@ print "Channel"
 for i in range(dat.Elec.shape[2]):
     print "k = %d, z=%.3f, phi = %.3f, holes = %.3f, elec = %.3f, rho = %.3f, Ez = %.3f"%(i,dat.z[i],dat.phi[nxcenter, nycenter,i],dat.Hole[nxcenter, nycenter,i],dat.Elec[nxcenter, nycenter,i],dat.rho[nxcenter, nycenter,i],dat.Ez[nxcenter, nycenter,i])
 
+nxcenter3 = nxcenter2 + GridsPerPixelX * ScaleFactor / 2
+print "Channel Stop"
+for i in range(dat.Elec.shape[2]):
+    print "k = %d, z=%.3f, phi = %.3f, holes = %.3f, elec = %.3f, rho = %.3f, Ez = %.3f"%(i,dat.z[i],dat.phi[nxcenter3, nycenter,i],dat.Hole[nxcenter3, nycenter,i],dat.Elec[nxcenter3, nycenter,i],dat.rho[nxcenter3, nycenter,i],dat.Ez[nxcenter3, nycenter,i])
+    
 # Create the output directory if it doesn't exist
 if not os.path.isdir(outputfiledir+"/plots"):
     os.mkdir(outputfiledir+"/plots")
@@ -419,7 +424,7 @@ for line in lines:
     if phase == 0:
         xin = float(values[3])
         yin = float(values[4])
-    elif phase == 4:
+    elif phase == 3 or phase == 4:
         xout = float(values[3])
         yout = float(values[4])
         if isnan(xout) or isnan(yout):
@@ -495,7 +500,7 @@ if ConfigData["LogPixelPaths"] != 0 and run % ConfigData["LogPixelPaths"] == 0:
             if YPlotThisID:
                 xpaths.append(xout)
                 zxpaths.append(zout)
-                if phase == 4:
+                if phase == 3 or phase == 4:
                     pixxin = int(xin/10.0)
                     if pixxin % 2 == 0:
                         color = "red"
@@ -507,7 +512,7 @@ if ConfigData["LogPixelPaths"] != 0 and run % ConfigData["LogPixelPaths"] == 0:
             if XPlotThisID:
                 ypaths.append(yout)
                 zypaths.append(zout)
-                if phase == 4:
+                if phase == 3 or phase == 4:
                     pixyin = int(yin/10.0)
                     if pixyin % 2 == 0:
                         color = "red"

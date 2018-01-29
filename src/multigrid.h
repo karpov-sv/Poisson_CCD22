@@ -185,6 +185,13 @@ class MultiGrid
 
   string outputfilebase; // Output filename base
   string outputfiledir; // Output filename directory
+  string PhotonList; // Photon list filename
+  int NumPhotons;  //Number of photons in list
+  double* PhotonListx;
+  double* PhotonListy;
+  double* PhotonListdxdz;
+  double* PhotonListdydz;
+  double* PhotonListlambda;  
 
   int VerboseLevel;
   int SaveData;
@@ -220,6 +227,7 @@ class MultiGrid
   ~MultiGrid();
 
   void ReadConfigurationFile(string);
+  void ReadPhotonList(string, string);
   void BuildArrays(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2DInt**, Array2D**, Array2D**, Array2DInt**, Array2DInt**);
   void SaveGrid();
   void SaveGridMulti();  
@@ -236,6 +244,7 @@ class MultiGrid
   double GetElectronInitialZ();
   void Trace(double*, int, bool, double, ofstream&);
   void TraceSpot(int);
+  void TraceList(int);        
   void TraceFringes(int);  
   void TraceGrid(int);
   void TraceRegion(int);
