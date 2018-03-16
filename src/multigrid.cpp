@@ -11,6 +11,36 @@
 
 #include "multigrid.h"
 
+// OpenMP specific realizations of non-portable functions used below
+#if defined(_OPENMP)
+
+#include <omp.h>
+
+// Thread-private state variable for erand48()
+static unsigned short omp_xsubi[3] = {0,0,0};
+#pragma omp threadprivate(omp_xsubi)
+
+void srand48(unsigned int seed)
+{
+#pragma omp parallel firstprivate(seed)
+    {
+        // Let's make the seeds unique for every thread so they follow different paths
+        seed += omp_get_thread_num();
+
+        // Not the same values as used in actual srand48() !
+        omp_xsubi[0] = 0x330E;
+        omp_xsubi[1] = (unsigned short)(seed & 0xffff);
+        omp_xsubi[2] = (unsigned short)(seed >> 16);
+    }
+}
+
+double drand48()
+{
+    return erand48(omp_xsubi);
+}
+
+#endif // _OPENMP
+
 MultiGrid::MultiGrid(string inname) //Constructor
 {
   // This reads in the data from the poisson.cfg
@@ -1217,7 +1247,8 @@ void MultiGrid::SetFixedCharges(Array3D* rho, Array2DInt* Ckmin)
 	      else if (rho->x[i] >= PixXmin + PixelSizeX - ChannelStopWidth/2.0 - ChannelStopSideDiff)
 		{
 		  // Right side taper
-		  if (VerboseLevel > 2) printf("In SetFixedCharges. Setting Tapers. Nz = %d, i = %d, Right\n",rho->nz,i);		      		      NRight += 1;
+		  if (VerboseLevel > 2) printf("In SetFixedCharges. Setting Tapers. Nz = %d, i = %d, Right\n",rho->nz,i);
+                  NRight += 1;
 		}
 	      else
 		{
@@ -2127,11 +2158,9 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   bool ReachedBottom = false;
   double mu, E2, Emag, ve, vth, tau, Tscatt;
   double theta, phiangle, zmin, zmax, zbottom;
-  double x, y, z;
   zmax = SensorThickness;
   zmin = E[0]->z[Channelkmin] + 2.0 * FieldOxide; // Roughly the top of the collection region
   zbottom = E[0]->zmz[Channelkmin] + 0.01;
-  x = point[0]; y = point[1]; z = point[2];
   double*  E_interp = new double[3];
   E2 = 0.0;
   for (i=0; i<3; i++)
@@ -2145,9 +2174,15 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   vth = vth / sqrt((double)NumDiffSteps);
   tau  = ME / QE * mu * METER_PER_CM * METER_PER_CM; // scattering time
 
-  static int id = 0;
+  static int id_global = 0;
+  int id;
+#pragma omp atomic capture
+  id = id_global ++; // We need to do it atomically so that id is properly unique for every electron
+
   int phase = 0;
+
   // Log initial position.
+#pragma omp critical(io)
   file << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
        << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
 
@@ -2223,6 +2258,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
       if(LogPixelPaths == 1)
       {
         // Log latest position update.
+#pragma omp critical(io)
         file << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
 	     << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
       }
@@ -2233,10 +2269,10 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   if(LogPixelPaths == 0)
     {
       // Log final position
+#pragma omp critical(io)
       file << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
 	   << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
     }
-  id += 1;
   return;
 }
 
@@ -2325,7 +2361,7 @@ void MultiGrid::TraceFringes(int m)
   bool Reject;
   boxx = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
   boxy = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
-  double* point = new double[3];
+  double point[3]; // This should be statically allocated so we may later declare it private for every thread
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
   string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
@@ -2351,7 +2387,10 @@ void MultiGrid::TraceFringes(int m)
 	  LogPixelPaths = 0;
 	}
     }
+  n = 0;
   ntrials = 0;
+
+#pragma omp parallel for private (x,y,z,FringeLength,theta,Reject,point)
   for (n=0; n<NumElec; n++)
     {
       if (n%1000==0)
@@ -2375,12 +2414,12 @@ void MultiGrid::TraceFringes(int m)
       point[0] = x;
       point[1] = y;
       point[2] = z;
+
       Trace(point, BottomSteps, true, bottomcharge, file);
     }
   file.close();
   printf("Finished writing grid file - %s. n = %d, ntrials = %d\n",filename.c_str(),n, ntrials);
   fflush(stdout);
-  delete[] point;
   LogPixelPaths = OldLogPixelPaths;
   return;
 }

@@ -4,21 +4,20 @@
 # 26-Feb-16
 #############################################################################
 
-BOOST_DIR     = /usr/common/usg/boost/1.55.0/hsw/gnu/
-HDF5_DIR     = /global/homes/c/cslage/Software/hdf5-1.8.14
-#HDF5_DIR     = /opt/cray/hdf5/1.8.14/INTEL/140
-SZIP_DIR     = /usr/common/usg/szip/2.1/hsw/gnu/
+BOOST_DIR     = /opt/local
+HDF5_DIR = /Users/karpov/sciwork/ccdlab/BNL/tmp/hdf5-1.8.20/hdf5
+#SZIP_DIR     = /usr/common/usg/szip/2.1/hsw/gnu/
 
 ####### Compiler, tools and options
 
 CC            = gcc
 CXX           = g++
-CFLAGS        = -pipe -O2 -Wall -W
-CXXFLAGS      = -pipe -O2 -Wall -W
+CFLAGS        = -pipe -O2 -Wall -W -fopenmp
+CXXFLAGS      = -pipe -O2 -Wall -W -fopenmp
 INCPATH       =  -I.  -I$(HDF5_DIR)/include -I$(BOOST_DIR)/include
 LINK          = g++
 LFLAGS        =
-LIBS          = -L$(BOOST_DIR)/lib -L$(HDF5_DIR)/lib -lm -lz -lhdf5 -lhdf5_cpp -lpthread
+LIBS          = -L$(HDF5_DIR)/lib -L$(BOOST_DIR)/lib -lm -lz -lhdf5 -lhdf5_cpp -lpthread -lomp
 
 ####### Output directory
 
