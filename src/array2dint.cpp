@@ -26,7 +26,7 @@ Array2DInt::Array2DInt(double Xmin, double Xmax, int Nx, double Ymin, double Yma
     }
   for (i=0; i<nx; i++)
     {
-      x[i] = xmin + dx/2.0 + (double) i * dx;	  
+      x[i] = xmin + dx/2.0 + (double) i * dx;
       for (j=0; j<ny; j++)
 	{
 	  data[i + j * nx] = 0.0;
@@ -50,4 +50,3 @@ int Array2DInt::YIndex(double y)
 {
   return (int)((y - ymin) / dy);
 }
-

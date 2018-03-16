@@ -18,6 +18,4 @@ using namespace std;
 using namespace H5;
 #endif
 
-int ReadHDF5File3(string, string, int, int, int, double*); // Rank 3 files 
-
-
+int ReadHDF5File3(string, string, int, int, int, double*); // Rank 3 files

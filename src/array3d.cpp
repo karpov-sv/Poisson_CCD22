@@ -13,7 +13,7 @@
 Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int Ny, double Zmin, double Zmax, int Nz, double NZExp, double SensorThickness)
 {
   int i, j, k;
-  nx = Nx; ny = Ny; nz = Nz; 
+  nx = Nx; ny = Ny; nz = Nz;
   xmin = Xmin; xmax = Xmax; ymin = Ymin; ymax = Ymax; zmin = Zmin; zmax = Zmax;
   nzexp = NZExp;
   sensorthickness = SensorThickness;
@@ -22,7 +22,7 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
   dzp = (zmax - zmin) / (double) nz;
   x = new double[nx]; y = new double[ny]; z = new double[nz]; zp = new double[nz]; zplus = new double[nz]; zminus = new double[nz]; dzpdz = new double[nz]; zpz = new double[nz]; zmz = new double[nz], zw = new double[nz];
   data = new double[nx * ny * nz];
-  
+
   // With the non-linear z-axis, it is useful to calculate a number of coordinates
   for (k=0; k<nz; k++)
     {
@@ -32,7 +32,7 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
       // zw[k] is the height of the cell in z
       if (k == 0)
 	{
-	  zmz[k] = zmin;    
+	  zmz[k] = zmin;
 	  zpz[k] = Z(zp[k] + dzp / 2.0);
 	}
       else if (k == nz - 1)
@@ -43,7 +43,7 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
       else
 	{
 	  zmz[k] = Z(zp[k] - dzp / 2.0);
-	  zpz[k] = Z(zp[k] + dzp / 2.0);	  
+	  zpz[k] = Z(zp[k] + dzp / 2.0);
 	}
       zw[k] = zpz[k] - zmz[k];
 
@@ -60,7 +60,7 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
 	  zplus[k] = zminus[k] / 2.0;
 	}
       //printf("k = %d, zp = %f, z = %f, zmz[k] = %f, zpz[k] = %f, zw[k] = %f\n",k, zp[k], z[k], zmz[k], zpz[k], zw[k]);
-      //printf("k = %d, zp = %f, zm = %f, zmz[k] = %f, zpz[k] = %f, zw[k] = %f\n",k, zp[k], z[k], zmz[k], zpz[k], zw[k]);            
+      //printf("k = %d, zp = %f, zm = %f, zmz[k] = %f, zpz[k] = %f, zw[k] = %f\n",k, zp[k], z[k], zmz[k], zpz[k], zw[k]);
     }
   //exit(0);
   //This may be useful for future unit testsing.
@@ -81,7 +81,7 @@ Array3D::Array3D(double Xmin, double Xmax, int Nx, double Ymin, double Ymax, int
     }
   for (i=0; i<nx; i++)
     {
-      x[i] = xmin + dx/2.0 + (double) i * dx;	  
+      x[i] = xmin + dx/2.0 + (double) i * dx;
       for (j=0; j<ny; j++)
 	{
 	  for (k=0; k<nz; k++)
@@ -100,7 +100,7 @@ Array3D::~Array3D()
   delete[] zp;
   delete[] zpz;
   delete[] zmz;
-  delete[] zw;  
+  delete[] zw;
   delete[] zplus;
   delete[] zminus;
   delete[] dzpdz;
@@ -122,7 +122,7 @@ double Array3D::PyramidalKernel3D(double deltax, double deltay, double deltaz)
 double Array3D::DataInterpolate3D(double xin, double yin, double zin)
 {
   int i, j, k, m, n, ml, nl, p, pl;
-  double d, norm, PK=0.0, deltax, deltay, deltaz; 
+  double d, norm, PK=0.0, deltax, deltay, deltaz;
   i=XIndex(xin);
   j=YIndex(yin);
   k=ZIndex(zin);
@@ -139,7 +139,7 @@ double Array3D::DataInterpolate3D(double xin, double yin, double zin)
 	    {
 	      pl = max(1,min(nz-2,p));
 	      if (zin > z[pl]) deltaz = fabs((zin-z[pl])/(z[pl+1]-z[pl]));
-	      else deltaz = fabs((zin-z[pl])/(z[pl-1]-z[pl]));	      
+	      else deltaz = fabs((zin-z[pl])/(z[pl-1]-z[pl]));
 	      if (isnan(deltaz))
 		{
 		  printf("zin = %f, k = %d, pl = %d, zp[pl] = %f, z[pl] = %f, deltaz = %f, PK = %f\n",zin, k, pl, zp[pl], z[pl], deltaz, PK);
@@ -194,7 +194,7 @@ double Array3D::Z(double zp)
 	{
 	  printf("Iterations exceeded in Z(zprime). Quitting\n");
 	  return newroot;
-	}	  
+	}
     }
   return newroot;
 }
@@ -203,12 +203,12 @@ double Array3D::ZPlus(double z)
 {
   //printf("z = %fdx = %f, dzp = %f, dzp = %f, d2zp = %f\n",z,dx,dzp,DZPDz(z),D2ZPDz2(z));
   //exit(0);
-  return dx * dx / (dzp * dzp) * (pow(DZPDz(z), 2.0) + dzp / 2.0 * D2ZPDz2(z)); 
+  return dx * dx / (dzp * dzp) * (pow(DZPDz(z), 2.0) + dzp / 2.0 * D2ZPDz2(z));
 }
 
 double Array3D::ZMinus(double z)
 {
-  return dx * dx / (dzp * dzp) * (pow(DZPDz(z), 2.0) - dzp / 2.0 * D2ZPDz2(z));   
+  return dx * dx / (dzp * dzp) * (pow(DZPDz(z), 2.0) - dzp / 2.0 * D2ZPDz2(z));
 }
 
 int Array3D::XIndex(double x)
@@ -225,4 +225,3 @@ int Array3D::ZIndex(double z)
 {
   return max(0,min(nz-1,(int)((ZP(z) - zmin) / dzp)));
 }
-

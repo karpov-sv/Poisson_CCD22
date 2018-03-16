@@ -26,7 +26,7 @@
 
 #include "hdf5write.h"
 
-int WriteHDF5File3(string filename , string datasetname, int NX, int NY, int NZ, double* data) 
+int WriteHDF5File3(string filename , string datasetname, int NX, int NY, int NZ, double* data)
 {
   int RANK = 3;
    // Try block to detect exceptions raised by any of the calls inside it
@@ -108,7 +108,7 @@ int WriteHDF5File3(string filename , string datasetname, int NX, int NY, int NZ,
    return 0;  // successfully terminated
 }
 
-int WriteHDF5File2(string filename , string datasetname, int NX, int NY, double* data) 
+int WriteHDF5File2(string filename , string datasetname, int NX, int NY, double* data)
 {
   int RANK = 2;
    // Try block to detect exceptions raised by any of the calls inside it
@@ -190,7 +190,7 @@ int WriteHDF5File2(string filename , string datasetname, int NX, int NY, double*
    return 0;  // successfully terminated
 }
 
-int WriteHDF5File1(string filename , string datasetname, int NX, double* data) 
+int WriteHDF5File1(string filename , string datasetname, int NX, double* data)
 {
   int RANK = 1;
    // Try block to detect exceptions raised by any of the calls inside it
@@ -270,17 +270,17 @@ int WriteHDF5File1(string filename , string datasetname, int NX, double* data)
    return 0;  // successfully terminated
 }
 
-int WriteHDF5IntAttribute(string filename , string datasetname, string attr_name, int attr_dims, int* attr_data) 
+int WriteHDF5IntAttribute(string filename , string datasetname, string attr_name, int attr_dims, int* attr_data)
 {
   hsize_t dims[1] = { attr_dims };
 
    // Try block to detect exceptions raised by any of the calls inside it
    try
    {
-      
+
       // Turn off the auto-printing when failure occurs so that we can
       // handle the errors appropriately
-       
+
       Exception::dontPrint();
 
       // Open an existing file and dataset.
@@ -292,12 +292,12 @@ int WriteHDF5IntAttribute(string filename , string datasetname, string attr_name
 
       DataSpace attr_dataspace = DataSpace (1, dims );
 
-      // Create a dataset attribute. 
+      // Create a dataset attribute.
 
-      Attribute attribute = dataset.createAttribute(attr_name, PredType::STD_I32BE, 
+      Attribute attribute = dataset.createAttribute(attr_name, PredType::STD_I32BE,
                                                 attr_dataspace, PropList::DEFAULT);
-     
-      // Write the attribute data. 
+
+      // Write the attribute data.
 
       attribute.write( PredType::NATIVE_INT, attr_data);
 
@@ -311,7 +311,7 @@ int WriteHDF5IntAttribute(string filename , string datasetname, string attr_name
       return -1;
    }
 
-   
+
    // catch failure caused by the H5File operations
    catch( AttributeIException error )
    {
@@ -337,17 +337,17 @@ int WriteHDF5IntAttribute(string filename , string datasetname, string attr_name
    return 0;  // successfully terminated
 }
 
-int WriteHDF5DoubleAttribute(string filename , string datasetname, string attr_name, int attr_dims, double* attr_data) 
+int WriteHDF5DoubleAttribute(string filename , string datasetname, string attr_name, int attr_dims, double* attr_data)
 {
   hsize_t dims[1] = { attr_dims };
 
    // Try block to detect exceptions raised by any of the calls inside it
    try
    {
-      
+
       // Turn off the auto-printing when failure occurs so that we can
       // handle the errors appropriately
-       
+
       Exception::dontPrint();
 
       // Open an existing file and dataset.
@@ -359,12 +359,12 @@ int WriteHDF5DoubleAttribute(string filename , string datasetname, string attr_n
 
       DataSpace attr_dataspace = DataSpace (1, dims );
 
-      // Create a dataset attribute. 
+      // Create a dataset attribute.
 
-      Attribute attribute = dataset.createAttribute(attr_name, PredType::NATIVE_DOUBLE, 
+      Attribute attribute = dataset.createAttribute(attr_name, PredType::NATIVE_DOUBLE,
                                                 attr_dataspace, PropList::DEFAULT);
-     
-      // Write the attribute data. 
+
+      // Write the attribute data.
 
       attribute.write( PredType::NATIVE_DOUBLE, attr_data);
 
@@ -378,7 +378,7 @@ int WriteHDF5DoubleAttribute(string filename , string datasetname, string attr_n
       return -1;
    }
 
-   
+
    // catch failure caused by the H5File operations
    catch( AttributeIException error )
    {

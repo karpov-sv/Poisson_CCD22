@@ -43,15 +43,15 @@ class MultiGrid
   int ncycle;		// Number of SOR cycles at each resolution
   int iterations;	// Number of VCycles
   double NZExp;		// Non-linear z axis exponent
-  
+
   int ScaleFactor;       // Power of 2 that sets the grid size
   double PixelSizeX;      // Pixel size in microns
-  double PixelSizeY;      // Pixel size in microns  
+  double PixelSizeY;      // Pixel size in microns
   double SensorThickness; // Thickness of the sensor in microns
   int GridsPerPixelX;     // Number of grids per pixel at ScaleFactor = 1
-  int GridsPerPixelY;     // Number of grids per pixel at ScaleFactor = 1  
+  int GridsPerPixelY;     // Number of grids per pixel at ScaleFactor = 1
   double GridSpacingX;    // Grid size in microns
-  double GridSpacingY;    // Grid size in microns  
+  double GridSpacingY;    // Grid size in microns
   int Nx;                // Number of grids in x at ScaleFactor = 1
   int Ny;                // Number of grids in y at ScaleFactor = 1
   int Nz;                // Number of grids in z at ScaleFactor = 1
@@ -82,7 +82,7 @@ class MultiGrid
   int ChannelStopProfile;       // 0 = Square well, N = N Gaussian
   double ChannelStopDoping;	// Channel Stop doping
   double ChannelStopDepth;     	// Channel stop depth in microns
-  double ChannelStopSideDiff; 
+  double ChannelStopSideDiff;
   double ChannelDoping;		// Channel doping
   double ChannelDepth;		// Channel depth in microns
   double BackgroundDoping; 	// Background doping
@@ -101,14 +101,14 @@ class MultiGrid
   int NTaper0;                  // Field oxide taper in grid cells at finest grid
 
   // Tree Ring Parameters
-  int AddTreeRings;  
+  int AddTreeRings;
   double TreeRingAngle;          // Rotation angle in  degrees
   double TreeRingAmplitude;      // Amplitude in multiples of background charge
   double TreeRingPeriod;         // Period of oscillations in microns
 
 // Pixel Regions
 
-  int NumberofPixelRegions;	  	  // 
+  int NumberofPixelRegions;	  	  //
   double** PixelRegionLowerLeft;	  //
   double** PixelRegionUpperRight;	  //
   int* NumberofFilledWells;		  //
@@ -119,7 +119,7 @@ class MultiGrid
 
   // QFe Look-up table
   int BuildQFeLookup;        // 0 - No QFe lookup; 1 - Build QFeLookup
-  int NQFe;                  // Number of entries in QFELookup table             
+  int NQFe;                  // Number of entries in QFELookup table
   double QFemin;             // Minimum QFe in table
   double QFemax;             // Maximum QFe in table
   double* QFeLookup;         // QFeLookup table
@@ -144,7 +144,7 @@ class MultiGrid
   double** FixedRegionUpperRight;
   double* FixedRegionVoltage;
   double* FixedRegionQFe;
-  double* FixedRegionQFh;    
+  double* FixedRegionQFh;
   int* FixedRegionDoping;
   int* FixedRegionOxide;
   int* FixedRegionBCType;
@@ -164,7 +164,7 @@ class MultiGrid
   int NumVertices;
   int CalculateZ0;
   double ElectronZ0Fill;
-  double ElectronZ0Area;  
+  double ElectronZ0Area;
   double CCDTemperature;
   double DiffMultiplier;
   double TopAbsorptionProb;
@@ -191,17 +191,17 @@ class MultiGrid
   double* PhotonListy;
   double* PhotonListdxdz;
   double* PhotonListdydz;
-  double* PhotonListlambda;  
+  double* PhotonListlambda;
 
   int VerboseLevel;
   int SaveData;
   int SaveElec;
   int SaveMultiGrids;
-  
+
 // Continuation info
 
   int Continuation;
-  int LastContinuationStep;  
+  int LastContinuationStep;
 
 
   string FilterBand;    // One of "u", "g", "r", "i", "z", "y".
@@ -215,10 +215,10 @@ class MultiGrid
   Array3D** E;        // Electric field
   Array3D** elec;      // Number of stored electrons
   Array3D** hole;      // Number of mobile holes
-  Array3D** eps;      // Dielectric constant array    
+  Array3D** eps;      // Dielectric constant array
   Array2DInt** BCType;      // BCType - 0->fixed potential; 1->Enormal = 0
   Array2D** QFe;         // Electron Quasi-Fermi level
-  Array2D** QFh;         // Hole Quasi-Fermi level  
+  Array2D** QFh;         // Hole Quasi-Fermi level
   Array2DInt** Ckmin;
   Array2DInt** Vkmin;
   double qfh;
@@ -230,10 +230,10 @@ class MultiGrid
   void ReadPhotonList(string, string);
   void BuildArrays(Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array3D**, Array2DInt**, Array2D**, Array2D**, Array2DInt**, Array2DInt**);
   void SaveGrid();
-  void SaveGridMulti();  
+  void SaveGridMulti();
   void SetInitialVoltages(Array3D*, Array3D*, Array2DInt*, Array2DInt*, Array2DInt*);
   void SetFixedCharges(Array3D*, Array2DInt*);
-  void FillElectronWells(Array3D*, Array3D*, Array2DInt*, double);  
+  void FillElectronWells(Array3D*, Array3D*, Array2DInt*, double);
   double SOR_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2D*, Array2D*, Array2DInt*, Array2DInt*);
   double Error_Inner(Array3D*, Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2DInt*);
   void Prolongate(Array3D*, Array3D*, Array3D*, Array3D*, Array2DInt*, Array2DInt*, Array2DInt*);
@@ -244,8 +244,8 @@ class MultiGrid
   double GetElectronInitialZ();
   void Trace(double*, int, bool, double, ofstream&);
   void TraceSpot(int);
-  void TraceList(int);        
-  void TraceFringes(int);  
+  void TraceList(int);
+  void TraceFringes(int);
   void TraceGrid(int);
   void TraceRegion(int);
   void FindEdge(double*, double, ofstream&);
@@ -256,7 +256,7 @@ class MultiGrid
   void Adjust_QFe(Array2D**, Array3D**, Array2DInt**);
   double ElectronQF(int, int);
   void WriteQFeLookup(string, string, string);
-  void WriteCollectedCharge(string, string, string);  
+  void WriteCollectedCharge(string, string, string);
   void ReadQFeLookup(string, string, string);
   void Setkmins(Array3D**, Array3D**, Array3D**, Array2DInt**, Array2DInt**);
   void CountCharges(Array3D**, Array3D**, Array3D**);

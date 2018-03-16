@@ -26,7 +26,7 @@
 
 #include "hdf5read.h"
 
-int ReadHDF5File3(string filename , string datasetname, int NX, int NY, int NZ, double* data_out) 
+int ReadHDF5File3(string filename , string datasetname, int NX, int NY, int NZ, double* data_out)
 {
   int RANK_OUT = 3;
    /*
@@ -84,4 +84,3 @@ int ReadHDF5File3(string filename , string datasetname, int NX, int NY, int NZ, 
    printf("HDF5 file %s successfully read.\n", filename.c_str());
    return 0;  // successfully terminated
 }
-

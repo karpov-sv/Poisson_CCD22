@@ -9,10 +9,10 @@
 
 //****************** polygon.h **************************
 
-#include <stdio.h>       
-#include <stdlib.h>      
+#include <stdio.h>
+#include <stdlib.h>
 #include <algorithm>            // for min_element
-#include <math.h>        
+#include <math.h>
 
 using namespace std;
 
@@ -42,4 +42,3 @@ class Polygon
   double Area();
   bool PointInside(Point*);
 };
-

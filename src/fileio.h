@@ -8,7 +8,7 @@
 */
 //****************** fileio.h **************************
 
-#include <stdio.h> 
+#include <stdio.h>
 #include <string.h>
 #include <string>
 #include <fstream>
@@ -20,4 +20,4 @@ double* GetDoubleList(string, string, int, double*);
 int GetIntParam(string, string, int);
 int* GetIntList(string, string, int, int*);
 string GetStringParam(string, string, string);
-string ReadPar(string, string); 
+string ReadPar(string, string);

@@ -16,7 +16,7 @@ Point::Point(double xin, double yin, double thetain)  //Constructor
   x = xin;
   y = yin;
   theta = thetain;
-  owner = this; 
+  owner = this;
 }
 
 Polygon::Polygon(int nmax)// Constructor - nmax is the max number of vertices
@@ -29,7 +29,7 @@ Polygon::Polygon(int nmax)// Constructor - nmax is the max number of vertices
 
 Polygon::~Polygon()// Destructor
 {
-  for (int i=0; i<npoints; i++) 
+  for (int i=0; i<npoints; i++)
     {
       if (pointlist[i]->owner == this)
 	{

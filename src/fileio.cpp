@@ -143,4 +143,3 @@ string ReadPar(string fname, string parnam)
     second = "";
   return second;
 }
-

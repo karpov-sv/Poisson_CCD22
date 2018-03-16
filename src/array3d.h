@@ -9,9 +9,9 @@
 
 //****************** array3d.h **************************
 
-#include <stdio.h>       
-#include <stdlib.h>      
-#include <math.h>        
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 #include <globals.h>
 
@@ -30,7 +30,7 @@ class Array3D //This packages the 3D data sets
   double DataInterpolate3D(double, double, double);
   int XIndex(double);
   int YIndex(double);
-  int ZIndex(double);  
+  int ZIndex(double);
   double ZP(double);
   double DZPDz(double);
   double D2ZPDz2(double);
