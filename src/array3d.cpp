@@ -123,6 +123,7 @@ double Array3D::DataInterpolate3D(double xin, double yin, double zin)
 {
   int i, j, k, m, n, ml, nl, p, pl;
   double d, norm, PK=0.0, deltax, deltay, deltaz;
+  double k1,k2,k3;
   i=XIndex(xin);
   j=YIndex(yin);
   k=ZIndex(zin);
@@ -131,20 +132,24 @@ double Array3D::DataInterpolate3D(double xin, double yin, double zin)
     {
       ml = max(0,min(nx-1,m));
       deltax=fabs((xin-x[ml])/dx);
+      k1 = (deltax>=1.0) ? 0.0 : (1.0-deltax);
       for (n=j-1; n<j+2; n++)
 	{
 	  nl = max(0,min(ny-1,n));
 	  deltay=fabs((yin-y[nl])/dy);
+          k2 = (deltay>=1.0) ? 0.0 : k1*(1.0-deltay);
 	  for (p=k-1; p<k+2; p++)
 	    {
 	      pl = max(1,min(nz-2,p));
 	      if (zin > z[pl]) deltaz = fabs((zin-z[pl])/(z[pl+1]-z[pl]));
 	      else deltaz = fabs((zin-z[pl])/(z[pl-1]-z[pl]));
-	      if (isnan(deltaz))
-		{
-		  printf("zin = %f, k = %d, pl = %d, zp[pl] = %f, z[pl] = %f, deltaz = %f, PK = %f\n",zin, k, pl, zp[pl], z[pl], deltaz, PK);
-		}
-    	      PK = PyramidalKernel3D(deltax,deltay,deltaz);
+              k3 = (deltaz>=1.0) ? 0.0 : (1.0-deltaz);
+	      // if (isnan(deltaz))
+	      //   {
+	      //     printf("zin = %f, k = %d, pl = %d, zp[pl] = %f, z[pl] = %f, deltaz = %f, PK = %f\n",zin, k, pl, zp[pl], z[pl], deltaz, PK);
+	      //   }
+    	      // PK = PyramidalKernel3D(deltax,deltay,deltaz);
+    	      PK = k2*k3;
 
 	      norm += PK;
 	      d += PK * data[ml + nl * nx + pl * nx * ny];

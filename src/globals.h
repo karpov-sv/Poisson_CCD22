@@ -9,9 +9,20 @@
 
 //****************** globals.h **************************
 
-#define pi 4.0 * atan(1.0)     // Pi
-#define max(x,y) (x>y?x:y)      // max macro definition
-#define min(x,y) (x>y?y:x)      // min macro definition
+#define pi M_PI
+/* #define max(x,y) (x>y?x:y)      // max macro definition */
+/* #define min(x,y) (x>y?y:x)      // min macro definition */
+
+/* min/max macros that do not evaluate arguments twice, BUT: GCC extension, not every compiler supports */
+#define min(a, b)               \
+    ({ typeof (a) _a = (a);     \
+        typeof (b) _b = (b);    \
+        _a < _b ? _a : _b; })
+
+#define max(a, b)               \
+    ({ typeof (a) _a = (a);     \
+        typeof (b) _b = (b);    \
+        _a > _b ? _a : _b; })
 
 #define QE             1.6E-19  // Electron charge in Coulombs
 #define ME             9.11E-31 // Electron effective mass (approx = 1 in Si)
