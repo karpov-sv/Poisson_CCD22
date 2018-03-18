@@ -12,8 +12,8 @@ HDF5_DIR = /Users/karpov/sciwork/ccdlab/BNL/tmp/hdf5-1.8.20/hdf5
 
 CC            = gcc
 CXX           = g++
-CFLAGS        = -pipe -O2 -Wall -W -fopenmp
-CXXFLAGS      = -pipe -O2 -Wall -W -fopenmp
+CFLAGS        = -pipe -O2 -Wall -W -fopenmp -ffast-math
+CXXFLAGS      = -pipe -O2 -Wall -W -fopenmp -ffast-math
 INCPATH       =  -I.  -I$(HDF5_DIR)/include -I$(BOOST_DIR)/include
 LINK          = g++ -fopenmp
 LFLAGS        =
