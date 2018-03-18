@@ -23,20 +23,20 @@ static unsigned short omp_xsubi[3] = {0,0,0};
 void srand48(unsigned int seed)
 {
 #pragma omp parallel firstprivate(seed)
-    {
-        // Let's make the seeds unique for every thread so they follow different paths
-        seed += omp_get_thread_num();
+  {
+    // Let's make the seeds unique for every thread so they follow different paths
+    seed += omp_get_thread_num();
 
-        // Not the same values as used in actual srand48() !
-        omp_xsubi[0] = 0x330E;
-        omp_xsubi[1] = (unsigned short)(seed & 0xffff);
-        omp_xsubi[2] = (unsigned short)(seed >> 16);
-    }
+    // Not the same values as used in actual srand48() !
+    omp_xsubi[0] = 0x330E;
+    omp_xsubi[1] = (unsigned short)(seed & 0xffff);
+    omp_xsubi[2] = (unsigned short)(seed >> 16);
+  }
 }
 
 double drand48()
 {
-    return erand48(omp_xsubi);
+  return erand48(omp_xsubi);
 }
 
 #endif // _OPENMP
@@ -56,6 +56,12 @@ MultiGrid::MultiGrid(string inname) //Constructor
   unsigned int seed = time(NULL);
   printf("Seed = %d\n",seed);
   srand48(seed);
+
+#if defined(_OPENMP)
+#pragma omp parallel
+#pragma omp single
+  printf("OpenMP enabled: %d thread(s)\n", omp_get_num_threads());
+#endif
 
   // First we read in the configuration information
   ReadConfigurationFile(inname);
@@ -573,6 +579,7 @@ void MultiGrid::ReadConfigurationFile(string inname)
   // Overall setup
   VerboseLevel = GetIntParam(inname, "VerboseLevel", 1); // 0 - minimal output, 1 - normal, 2 - more verbose.
   NumSteps = GetIntParam(inname, "NumSteps", 100);
+  CollectedChargeIncrement = GetIntParam(inname, "CollectedChargeIncrement", 1);
   SaveData =  GetIntParam(inname, "SaveData", 1);     // 0 - Save only Pts, N save phi,rho,E every Nth step
   SaveElec =  GetIntParam(inname, "SaveElec", 1);     // 0 - Save only Pts, N save Elec every Nth step
   SaveMultiGrids =  GetIntParam(inname, "SaveMultiGrids", 0);     // 1 - Save all of the grids at all scales
@@ -883,7 +890,8 @@ void MultiGrid::ReadConfigurationFile(string inname)
       PhotonList  = GetStringParam(inname,"PhotonList", "None"); //Photon List file
       if (PhotonList == "None")
 	{
-	  printf("No PhotonList specified.  Quitting.");
+	  printf("No PhotonList specified.  Quitting.\n");
+          exit(0);
 	}
       else
 	{
@@ -2176,7 +2184,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 
   static int id_global = 0;
   int id;
-#pragma omp atomic capture
+#pragma omp critical(id)
   id = id_global ++; // We need to do it atomically so that id is properly unique for every electron
 
   int phase = 0;
@@ -2247,7 +2255,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 	      int PixX = (int)floor((point[0] - PixelBoundaryLowerLeft[0]) / PixelSizeX);
 	      int PixY = (int)floor((point[1] - PixelBoundaryLowerLeft[1]) / PixelSizeY);
 	      j = PixX + PixelBoundaryNx * PixY;
-	      if (j >= 0 && j < PixelBoundaryNx * PixelBoundaryNy)   CollectedCharge[0][j] += 1;
+	      if (j >= 0 && j < PixelBoundaryNx * PixelBoundaryNy)   CollectedCharge[0][j] += CollectedChargeIncrement;
 	      break;
 	    }
 	  if (i > 0 && i < elec[0]->nx-1 && j > 0 && j < elec[0]->ny-1 && k < elec[0]->nz-1 && savecharge && ElectronMethod == 0)
@@ -2295,7 +2303,7 @@ void MultiGrid::TraceSpot(int m)
   double x, y, z, rsq, v1, v2, fac, xcenter, ycenter;
   int n;
   double bottomcharge = 1.0 / (double)BottomSteps;
-  double* point = new double[3];
+  double point[3]; // This should be statically allocated so we may later declare it private for every thread
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
   string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
@@ -2324,6 +2332,8 @@ void MultiGrid::TraceSpot(int m)
 
   xcenter = (PixelBoundaryUpperRight[0] + PixelBoundaryLowerLeft[0]) / 2.0 + Xoffset;
   ycenter = (PixelBoundaryUpperRight[1] + PixelBoundaryLowerLeft[1]) / 2.0 + Yoffset;
+
+#pragma omp parallel for private(rsq,v1,v2,fac,x,y,z,point)
   for (n=0; n<NumElec; n++)
     {
       //  Use Box-Muller algorithm to generate two Gaussian random numbers
@@ -2332,7 +2342,7 @@ void MultiGrid::TraceSpot(int m)
 	{
 	  v1 = 2.0 * drand48() - 1.0;
 	  v2 = 2.0 * drand48() - 1.0;
-	  rsq = v1*v1 + v2 *v2;
+	  rsq = v1*v1 + v2*v2;
 	}
       fac = sqrt(-2.0 * log(rsq) / rsq);
       x = xcenter + Sigmax * v1 * fac;
@@ -2346,7 +2356,6 @@ void MultiGrid::TraceSpot(int m)
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
   fflush(stdout);
-  delete[] point;
   LogPixelPaths = OldLogPixelPaths;
   return;
 }
@@ -2390,12 +2399,12 @@ void MultiGrid::TraceFringes(int m)
   n = 0;
   ntrials = 0;
 
-#pragma omp parallel for private (x,y,z,FringeLength,theta,Reject,point)
+#pragma omp parallel for private(x,y,z,FringeLength,theta,Reject,point)
   for (n=0; n<NumElec; n++)
     {
       if (n%1000==0)
 	{
-	  if (VerboseLevel > 1) printf("In TraceRegion. Finished %d electrons\n",n);
+	  if (VerboseLevel > 1) printf("In TraceFringes. Finished %d electrons\n",n);
 	}
       Reject=true;
       while (Reject) // Rejection sampling
@@ -2418,7 +2427,7 @@ void MultiGrid::TraceFringes(int m)
       Trace(point, BottomSteps, true, bottomcharge, file);
     }
   file.close();
-  printf("Finished writing grid file - %s. n = %d, ntrials = %d\n",filename.c_str(),n, ntrials);
+  printf("Finished writing grid file - %s. n = %d, ntrials = %d\n",filename.c_str(),NumElec, ntrials);
   fflush(stdout);
   LogPixelPaths = OldLogPixelPaths;
   return;
@@ -2435,7 +2444,7 @@ void MultiGrid::TraceList(int m)
   zbottom = E[0]->zmz[Channelkmin] + 0.01;
   int n, nlist;
   double bottomcharge = 1.0 / (double)BottomSteps;
-  double* point = new double[3];
+  double point[3]; // This should be statically allocated so we may later declare it private for every thread
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
   string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
@@ -2464,13 +2473,16 @@ void MultiGrid::TraceList(int m)
 
   xcenter = (PixelBoundaryUpperRight[0] + PixelBoundaryLowerLeft[0]) / 2.0 + Xoffset;
   ycenter = (PixelBoundaryUpperRight[1] + PixelBoundaryLowerLeft[1]) / 2.0 + Yoffset;
+#pragma omp parallel for private(nlist,abs_length,path_length,x,y,z,point)
   for (n=0; n<NumElec; n++)
     {
       nlist = m * NumElec + n;
       if (nlist > NumPhotons)
 	{
 	  printf("Reached end of photon list in step %d.\n",m);
-	  return;
+          // What should we really do here?
+          //return;
+          exit(0);
 	}
 
       abs_length = pow(10.0,(-4.0 + (PhotonListlambda[nlist] - 500.0) / 250.0)) * 1.0E4; //Approximate formula in micron^-1
@@ -2493,7 +2505,6 @@ void MultiGrid::TraceList(int m)
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
   fflush(stdout);
-  delete[] point;
   LogPixelPaths = OldLogPixelPaths;
   return;
 }
@@ -2502,7 +2513,7 @@ void MultiGrid::TraceGrid(int m)
 {
   // This traces a grid of starting electron locations.
   double x, y, z;
-  double* point = new double[3];
+  double point[3]; // This should be statically allocated so we may later declare it private for every thread
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
   string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
@@ -2529,9 +2540,14 @@ void MultiGrid::TraceGrid(int m)
 	  LogPixelPaths = 0;
 	}
     }
-  x = PixelBoundaryLowerLeft[0] + PixelBoundaryStepSize[0] / 2.0;
-  while (x < PixelBoundaryUpperRight[0])
+
+  int i;
+  int nsteps = (PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0] - PixelBoundaryStepSize[0]) / PixelBoundaryStepSize[0];
+
+#pragma omp parallel for private(x,y,z,point)
+  for(i = 0; i < nsteps; i++)
     {
+      x = PixelBoundaryLowerLeft[0] + PixelBoundaryStepSize[0] / 2.0 + PixelBoundaryStepSize[0]*i;
       y = PixelBoundaryLowerLeft[1] + PixelBoundaryStepSize[1] / 2.0;
       while (y < PixelBoundaryUpperRight[1])
 	{
@@ -2542,12 +2558,10 @@ void MultiGrid::TraceGrid(int m)
 	  Trace(point, 100, false, 0.0, file);
 	  y += PixelBoundaryStepSize[1];
 	}
-      x += PixelBoundaryStepSize[0];
     }
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
   fflush(stdout);
-  delete[] point;
   LogPixelPaths = OldLogPixelPaths;
   return;
 }
@@ -2559,7 +2573,7 @@ void MultiGrid::TraceRegion(int m)
   int n;
   boxx = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
   boxy = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
-  double* point = new double[3];
+  double point[3]; // This should be statically allocated so we may later declare it private for every thread
   string underscore = "_", slash = "/", name = "Pts";
   string StepNum = boost::lexical_cast<std::string>(m);
   string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+".dat");
@@ -2590,6 +2604,7 @@ void MultiGrid::TraceRegion(int m)
   double x_center = 0.5 * (PixelBoundaryLowerLeft[0] + PixelBoundaryUpperRight[0]);
   double y_center = 0.5 * (PixelBoundaryLowerLeft[1] + PixelBoundaryUpperRight[1]);
 
+#pragma omp parallel for private(x,y,z,point)
   for (n=0; n<NumElec; n++)
     {
       if (n%1000==0)
@@ -2621,7 +2636,6 @@ void MultiGrid::TraceRegion(int m)
   file.close();
   printf("Finished writing grid file - %s\n",filename.c_str());
   fflush(stdout);
-  delete[] point;
   LogPixelPaths = OldLogPixelPaths;
   return;
 }

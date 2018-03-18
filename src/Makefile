@@ -4,9 +4,19 @@
 # 26-Feb-16
 #############################################################################
 
+HOST := $(shell hostname)
+
+####### Host-specific paths
+
+ifeq ($(HOST), kitten)
 BOOST_DIR     = /opt/local
 HDF5_DIR = /Users/karpov/sciwork/ccdlab/BNL/tmp/hdf5-1.8.20/hdf5
-#SZIP_DIR     = /usr/common/usg/szip/2.1/hsw/gnu/
+else
+BOOST_DIR     = /usr/common/usg/boost/1.55.0/hsw/gnu/
+HDF5_DIR     = /global/homes/c/cslage/Software/hdf5-1.8.14
+#HDF5_DIR     = /opt/cray/hdf5/1.8.14/INTEL/140
+SZIP_DIR     = /usr/common/usg/szip/2.1/hsw/gnu/
+endif
 
 ####### Compiler, tools and options
 

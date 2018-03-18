@@ -174,6 +174,7 @@ class MultiGrid
   int SaturationModel;
   int NumElec;
   int NumSteps;
+  int CollectedChargeIncrement;
   double Sigmax;
   double Sigmay;
   double Xoffset;
