@@ -192,7 +192,10 @@ double Array3D::Z(double zp)
   while (error>1e-12)
     {
       newroot = lastroot - (ZP(lastroot) - zp) / DZPDz(lastroot);
-      error = fabs((newroot - lastroot) / lastroot);
+      if(newroot != lastroot && lastroot != 0.0)
+          error = fabs((newroot - lastroot) / lastroot);
+      else
+          error = 0;
       lastroot=newroot;
       i=i+1;
       if (i > 100)
