@@ -57,15 +57,16 @@ MultiGrid::MultiGrid(string inname) //Constructor
   printf("Seed = %d\n",seed);
   srand48(seed);
 
+  // First we read in the configuration information
+  ReadConfigurationFile(inname);
+  printf("Finished Reading config file\n");
+
 #if defined(_OPENMP)
 #pragma omp parallel
 #pragma omp single
   printf("OpenMP enabled: %d thread(s)\n", omp_get_num_threads());
 #endif
 
-  // First we read in the configuration information
-  ReadConfigurationFile(inname);
-  printf("Finished Reading config file\n");
   // Then, we build the multigrid arrays and set the initial conditions
   phi = new Array3D*[nsteps+1];
   rho = new Array3D*[nsteps+1];
@@ -973,6 +974,14 @@ void MultiGrid::ReadConfigurationFile(string inname)
         filter_input.close();
       }
     }
+
+#if defined(_OPENMP)
+  int nthreads = GetIntParam(inname, "NumThreads", 0); // 0 for automatic or OMP_NUM_THREADS environment variable
+  if(nthreads > 0)
+    {
+      omp_set_num_threads(nthreads);
+    }
+#endif
 
   return;
 }
