@@ -2198,9 +2198,10 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
 
   int phase = 0;
 
+  stringstream sbuf; // In-memory buffer for output caching
+
   // Log initial position.
-#pragma omp critical(io)
-  file << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
+  sbuf << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
        << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
 
   phase = 1;
@@ -2275,8 +2276,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
       if(LogPixelPaths == 1)
       {
         // Log latest position update.
-#pragma omp critical(io)
-        file << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
+        sbuf << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
 	     << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
       }
     point[2] = max(zbottom, point[2]);
@@ -2286,10 +2286,13 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   if(LogPixelPaths == 0)
     {
       // Log final position
-#pragma omp critical(io)
-      file << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
+      sbuf << setw(8) << id << setw(8) << tracesteps << setw(3) << phase
 	   << setw(15) << point[0] << setw(15) << point[1] << setw(15) << point[2] << endl;
     }
+
+#pragma omp critical(io)
+  file << sbuf.rdbuf(); // Atomically output all track points to file
+
   return;
 }
 
