@@ -223,14 +223,20 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	    {
 	      TraceList(m);
 	    }
+
+          time2 = time(NULL);
+	  trace_time = difftime(time2, time1);
+	  printf("Finished tracing electrons. Trace time = %.3f seconds\n",trace_time);
+
 	  // Calculate pixel areas after tracing electrons, if requested.
 	  if (PixelAreas >= 0 && (m % PixelAreas) == 0)
 	    {
+              time1 = time(NULL);
 	      CalculatePixelAreas(m);
+              time2 = time(NULL);
+              trace_time = difftime(time2, time1);
+              printf("Finished calculating pixel areas, time = %.3f seconds\n",trace_time);
 	    }
-	  time2 = time(NULL);
-	  trace_time = difftime(time2, time1);
-	  printf("Finished tracing electrons. Trace time = %.3f seconds\n",trace_time);
 	}
     }
   return;
@@ -2771,17 +2777,21 @@ void MultiGrid::CalculatePixelAreas(int m)
   OldDiffMultiplier = DiffMultiplier;
   DiffMultiplier = 0.0;
   double x, y, xb, yb, theta, theta0, theta1, dtheta, area;
-  double* point = new double[3];
+  double point[3];
   string dummy = "dummy";
   string ptsfilename = (dummy);
   ofstream ptsfile; //Not needed, but we need to pass something to the Trace subroutine
 
-
   // Now calculate the pixel vertices
   Polygon** polyarray = new Polygon*[PixelBoundaryNx * PixelBoundaryNy];
-  x = PixelBoundaryLowerLeft[0] + PixelSizeX / 2.0;
-  while (x < PixelBoundaryUpperRight[0])
+
+  int i;
+  int nsteps = (PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0]) / PixelSizeX;
+
+#pragma omp parallel for private(x,y,pixx,pixy,k,n,point,theta,theta0,theta1,dtheta)
+  for(i = 0; i < nsteps; i++)
     {
+      x = PixelBoundaryLowerLeft[0] + PixelSizeX / 2.0 + i*PixelSizeX;
       pixx = (int)floor((x - PixelBoundaryLowerLeft[0]) / PixelSizeX);
       y = PixelBoundaryLowerLeft[1] + PixelSizeY / 2.0;
       while (y < PixelBoundaryUpperRight[1])
@@ -2833,7 +2843,6 @@ void MultiGrid::CalculatePixelAreas(int m)
 		 polyarray[pixx + PixelBoundaryNx * pixy]->pointlist[3]->x, polyarray[pixx + PixelBoundaryNx * pixy]->pointlist[3]->y);
 	  y += PixelSizeY;
 	}
-      x += PixelSizeX;
     }
 
   // Now calculate and print out the pixel areas
@@ -2891,7 +2900,6 @@ void MultiGrid::CalculatePixelAreas(int m)
   ptsfile.close();
   if (VerboseLevel > 1) printf("Finished writing grid file - %s\n",vertexfilename.c_str());
   // Clean up
-  delete[] point;
   for (pixx=0; pixx<PixelBoundaryNx; pixx++)
     {
       for (pixy=0; pixy<PixelBoundaryNy; pixy++)
