@@ -213,6 +213,10 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	  if (PixelBoundaryTestType == 2 || PixelBoundaryTestType == 4)
 	    {
 	      TraceRegion(m);
+              if (PixelBoundaryTestType == 4)
+                {
+                  WriteCollectedCharge(outputfiledir, outputfilebase+underscore+StepNum, "CC");
+                }
 	    }
 	  if (PixelBoundaryTestType == 3)
 	    {
@@ -222,6 +226,7 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	  if (PixelBoundaryTestType == 5)
 	    {
 	      TraceList(m);
+	      WriteCollectedCharge(outputfiledir, outputfilebase+underscore+StepNum, "CC");
 	    }
 
           time2 = time(NULL);
@@ -2229,6 +2234,16 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
       point[0] += (vth * sin(theta) * cos(phiangle) + E_interp[0] * ve) * Tscatt;
       point[1] += (vth * sin(theta) * sin(phiangle) + E_interp[1] * ve) * Tscatt;
       point[2] += (vth * cos(theta) + E_interp[2] * ve) * Tscatt;
+
+      // Periodic condition on point coordinates to keep it confined
+      while (point[0] < PixelBoundaryLowerLeft[0])
+          point[0] += PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
+      while (point[0] > PixelBoundaryUpperRight[0])
+          point[0] -= PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0];
+      while (point[1] < PixelBoundaryLowerLeft[1])
+          point[1] += PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
+      while (point[1] > PixelBoundaryUpperRight[1])
+          point[1] -= PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1];
 
       if (point[2] > zmax)
 	{
