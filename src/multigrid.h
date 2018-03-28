@@ -194,6 +194,8 @@ class MultiGrid
   double* PhotonListdydz;
   double* PhotonListlambda;
 
+  int NumFe55;  //Number of Fe55 clouds to estimate on every step
+
   int VerboseLevel;
   int SaveData;
   int SaveElec;
@@ -249,6 +251,7 @@ class MultiGrid
   void TraceFringes(int);
   void TraceGrid(int);
   void TraceRegion(int);
+  void TraceFe55(int);
   void FindEdge(double*, double, ofstream&);
   void FindCorner(double*, double*, ofstream&);
   void CalculatePixelAreas(int);

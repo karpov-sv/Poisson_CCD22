@@ -41,6 +41,43 @@ double drand48()
 
 #endif // _OPENMP
 
+// Exponentially distributed random number
+inline double random_exponential(double m)
+{
+  return -m * log(1.0 - drand48());
+}
+
+/* ========================================================================
+ * Returns a normal (Gaussian) distributed real number.
+ * NOTE: use s > 0.0
+ *
+ * Uses a very accurate approximation of the normal idf due to Odeh & Evans,
+ * J. Applied Statistics, 1974, vol 23, pp 96-97.
+ * ========================================================================
+ */
+double random_normal(double m, double s)
+{
+  const double p0 = 0.322232431088;     const double q0 = 0.099348462606;
+  const double p1 = 1.0;                const double q1 = 0.588581570495;
+  const double p2 = 0.342242088547;     const double q2 = 0.531103462366;
+  const double p3 = 0.204231210245e-1;  const double q3 = 0.103537752850;
+  const double p4 = 0.453642210148e-4;  const double q4 = 0.385607006340e-2;
+  double u, t, p, q, z;
+
+  u   = drand48();
+  if (u < 0.5)
+      t = sqrt(-2.0 * log(u));
+  else
+      t = sqrt(-2.0 * log(1.0 - u));
+  p   = p0 + t * (p1 + t * (p2 + t * (p3 + t * p4)));
+  q   = q0 + t * (q1 + t * (q2 + t * (q3 + t * q4)));
+  if (u < 0.5)
+      z = (p / q) - t;
+  else
+      z = t - (p / q);
+  return (m + s * z);
+}
+
 MultiGrid::MultiGrid(string inname) //Constructor
 {
   // This reads in the data from the poisson.cfg
@@ -227,6 +264,10 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	    {
 	      TraceList(m);
 	      WriteCollectedCharge(outputfiledir, outputfilebase+underscore+StepNum, "CC");
+	    }
+	  if (PixelBoundaryTestType == 10)
+	    {
+	      TraceFe55(m);
 	    }
 
           time2 = time(NULL);
@@ -806,6 +847,10 @@ void MultiGrid::ReadConfigurationFile(string inname)
 	  Xoffset = GetDoubleParam(inname, "Xoffset", 0.0);
 	  Yoffset = GetDoubleParam(inname, "Yoffset", 0.0);
 	}
+      if (PixelBoundaryTestType == 10)
+        {
+	  NumFe55 = GetIntParam(inname, "NumFe55", 100);
+        }
 
       for (i=0; i<NumberofPixelRegions; i++)
 	{
@@ -2673,6 +2718,59 @@ void MultiGrid::TraceRegion(int m)
   return;
 }
 
+void MultiGrid::TraceFe55(int m)
+{
+  // This traces a random set of starting electron locations within the PixelBoundary.
+  double boxx = PixelBoundaryUpperRight[0] - PixelBoundaryLowerLeft[0] - 2.0*PixelSizeX;
+  double boxy = PixelBoundaryUpperRight[1] - PixelBoundaryLowerLeft[1] - 2.0*PixelSizeY;
+  string underscore = "_", slash = "/", name = "Pts";
+  string StepNum = boost::lexical_cast<std::string>(m);
+  int iter;
+
+#pragma omp parallel for
+  for(iter = 0; iter < NumFe55; iter ++){
+    string SpotNum = boost::lexical_cast<std::string>(iter);
+    double x, y, z;
+    double point[3];
+    int n;
+
+    string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+underscore+SpotNum+".dat");
+    ofstream file;
+    file.open(filename.c_str());
+    file.setf(ios::fixed);
+    file.setf(ios::showpoint);
+    file.setf(ios::left);
+    file.precision(4);
+    // Write header line.
+    file << setw(8) << "id" << setw(8) << "step" << setw(3) << "ph"
+         << setw(15) << "x" << setw(15) << "y" << setw(15) << "z" << endl;
+
+    // Fe55 spot position
+    double x_center = PixelBoundaryLowerLeft[0] + PixelSizeX + drand48() * boxx;
+    double y_center = PixelBoundaryLowerLeft[1] + PixelSizeY + drand48() * boxy;
+    double z0;
+
+    do {
+      z0 = SensorThickness - random_exponential(28.8); // Interaction depth for Fe55 in silicon
+    } while (z0 < 10.0); // What is the sensible upper limit on penetration depth?..
+
+    for (n=0; n<1620; n++){
+      x = x_center + random_normal(0, 0.3);
+      y = y_center + random_normal(0, 0.3);
+      z = z0 + random_normal(0, 1.0);
+
+      point[0] = x;
+      point[1] = y;
+      point[2] = z;
+
+      Trace(point, BottomSteps, false, 0.0, file);
+    }
+    file.close();
+  }
+
+  return;
+}
+
 void MultiGrid::FindEdge(double* point, double theta, ofstream& file)
 {
   // This finds the edge of the pixel through binary search given a starting point and a line angle
@@ -2938,7 +3036,7 @@ double MultiGrid::mu_Si (double E,double T)
   double vm=1.53e9 * pow(T,-0.87); // cm/s
   double Ec = 1.01 * pow(T,1.55); // V/cm
   double beta = 2.57e-2 * pow(T,0.66); // index
-  return((vm/Ec)/pow(1 + pow(fabs(E)/Ec,beta),1/beta));
+  return((vm/Ec)/pow(1 + pow(fabs(E)/Ec,beta),1.0/beta));
 }
 
 void MultiGrid::Set_QFh(Array2D** QFh)
