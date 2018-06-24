@@ -158,6 +158,9 @@ class MultiGrid
   double* PixelBoundaryLowerLeft;
   double* PixelBoundaryUpperRight;
   double* PixelBoundaryStepSize;
+  double Fe55CloudRadius;
+  double Fe55ElectronMult;
+  double Fe55HoleMult;
 
   int PixelBoundaryNx;
   int PixelBoundaryNy;
@@ -252,6 +255,7 @@ class MultiGrid
   void TraceGrid(int);
   void TraceRegion(int);
   void TraceFe55(int);
+  void TraceFe55Cloud(int);
   void FindEdge(double*, double, ofstream&);
   void FindCorner(double*, double*, ofstream&);
   void CalculatePixelAreas(int);

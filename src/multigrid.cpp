@@ -265,6 +265,10 @@ MultiGrid::MultiGrid(string inname) //Constructor
 	      TraceList(m);
 	      WriteCollectedCharge(outputfiledir, outputfilebase+underscore+StepNum, "CC");
 	    }
+	  if (PixelBoundaryTestType == 6)
+	    {
+	      TraceFe55Cloud(m);
+	    }
 	  if (PixelBoundaryTestType == 10)
 	    {
 	      TraceFe55(m);
@@ -846,6 +850,14 @@ void MultiGrid::ReadConfigurationFile(string inname)
 	  FringePeriod = GetDoubleParam(inname, "FringePeriod", 0.0);
 	  Xoffset = GetDoubleParam(inname, "Xoffset", 0.0);
 	  Yoffset = GetDoubleParam(inname, "Yoffset", 0.0);
+	}
+      if (PixelBoundaryTestType == 6)
+	{
+	  NumFe55 = GetIntParam(inname, "NumFe55", 100);
+	  NumElec = GetIntParam(inname, "NumElec", 1620);
+	  Fe55CloudRadius = GetDoubleParam(inname, "Fe55CloudRadius", 0.2);
+	  Fe55ElectronMult = GetDoubleParam(inname, "Fe55ElectronMult", 1.0);
+	  Fe55HoleMult = GetDoubleParam(inname, "Fe55HoleMult", 1.0);
 	}
       if (PixelBoundaryTestType == 10)
         {
@@ -2232,7 +2244,6 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   double mu, E2, Emag, ve, vth, tau, Tscatt;
   double theta, phiangle, zmin, zmax, zbottom;
   zmax = SensorThickness;
-
   zmin = E[0]->z[Channelkmin] + 2.0 * FieldOxide; // Roughly the top of the collection region
   zbottom = E[0]->zmz[Channelkmin] + 0.01;
   double*  E_interp = new double[3];
@@ -2244,8 +2255,8 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
     }
   Emag = max(0.1, sqrt(E2));
   mu = mu_Si(Emag * MICRON_PER_CM, CCDTemperature); // Mobility
-  //vth = sqrt(3.0 * KBOLTZMANN * CCDTemperature / ME)  * MICRON_PER_M * DiffMultiplier; // Thermal Velocity
   // Thermal Velocity - 0.27 factor from Green, 1990
+  //vth = sqrt(3.0 * KBOLTZMANN * CCDTemperature / ME)  * MICRON_PER_M * DiffMultiplier; // Thermal Velocity
   vth = sqrt(8.0 * KBOLTZMANN * CCDTemperature / (ME * 0.27 * pi))  * MICRON_PER_M * DiffMultiplier;
   vth = vth / sqrt((double)NumDiffSteps);
   tau  = ME / QE * mu * METER_PER_CM * METER_PER_CM; // scattering time
@@ -2769,6 +2780,305 @@ void MultiGrid::TraceFe55(int m)
       Trace(point, BottomSteps, false, 0.0, file);
     }
     file.close();
+  }
+
+  return;
+}
+
+void MultiGrid::TraceFe55Cloud(int m)
+{
+  // This generates an Fe55 charge cloud and traces all electrons in the cloud
+  // down to the final pixels.  Mutual repulsion of the electrons in the cloud is included.
+  // Currently only supports ElectronMethod = 2
+
+  int iter;
+
+#pragma omp parallel for
+  for(iter = 0; iter < NumFe55; iter++){
+    string SpotNum = boost::lexical_cast<std::string>(iter);
+
+    int i, j, n, nn, phase, bottomphase = 4, bottomcount, topcount, tracesteps = 0, tracestepsmax = 10000;
+    double mu, E2, Emag, r2, sqrtr2, ve=0.0, vth=0.0, tau=0.0, Tscatt=0.0;
+    double rsq, rcloud, v1, v2, fac, xcenter, ycenter, zcenter;
+    double theta, phiangle, zmin, zmax;
+    double SORChargeFactor =  (QE*MICRON_PER_M/(EPSILON_0*EPSILON_SI));
+    double ElectronRepulsionFactor = SORChargeFactor / (4.0 * pi) * Fe55ElectronMult;
+    double HoleRepulsionFactor = SORChargeFactor / (4.0 * pi) * Fe55HoleMult;
+    double MinRadiusSquared = 1.0E-6;
+    // This sets the minimum radius for calculating the mutual
+    // attraction and repulsion.  this prevents these fields from getting too large
+    // Currently set at 0.001 micron
+    zmax = SensorThickness - 2.0;
+    zmin = E[0]->z[Channelkmin] + 2.0 * FieldOxide;
+    double*  E_interp = new double[3];
+    double* r = new double[3];
+    double PenetrationDepth = 30.0; // Exponential penetration depth in microns
+    string underscore = "_", slash = "/", name = "Pts";
+    string StepNum = boost::lexical_cast<std::string>(m);
+    string filename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+underscore+SpotNum+".dat");
+    ofstream file;
+    file.open(filename.c_str());
+    file.setf(ios::fixed);
+    file.setf(ios::showpoint);
+    file.setf(ios::left);
+    file.precision(4);
+    // Write header line.
+    file << setw(8) << "id" << setw(8) << "step" << setw(3) << "ph"
+         << setw(15) << "x" << setw(15) << "y" << setw(15) << "z" << endl;
+
+    name = "HPts";
+    string hfilename = (outputfiledir+slash+outputfilebase+underscore+StepNum+underscore+name+underscore+SpotNum+".dat");
+    ofstream hfile;
+    hfile.open(hfilename.c_str());
+    hfile.setf(ios::fixed);
+    hfile.setf(ios::showpoint);
+    hfile.setf(ios::left);
+    hfile.precision(4);
+    // Write header line.
+    hfile << setw(8) << "id" << setw(8) << "step" << setw(3) << "ph"
+         << setw(15) << "x" << setw(15) << "y" << setw(15) << "z" << endl;
+
+    // First we generate the initial charge cloud position
+    // Center the cloud somewhere in the center pixel
+    xcenter = (PixelBoundaryUpperRight[0] + PixelBoundaryLowerLeft[0]) / 2.0 ;
+    ycenter = (PixelBoundaryUpperRight[1] + PixelBoundaryLowerLeft[1]) / 2.0;
+    xcenter += PixelSizeX * (0.5 - drand48());
+    ycenter += PixelSizeY * (0.5 - drand48());
+    // Draw zcenter from an exponential distribution. Keep it in the silicon.
+    zcenter = SensorThickness + PenetrationDepth * log(1.0 - drand48());
+    zcenter = max(zmin, min(zmax, zcenter));
+
+    // Now generate the initial charge cloud
+    phase = 0;
+    double** Ecloud = new double*[NumElec]; // Electrons
+    double** Hcloud = new double*[NumElec]; // Holes
+    for (n=0; n<NumElec; n++)
+      {
+        Ecloud[n] = new double[3];
+        Hcloud[n] = new double[3];
+        //  Use Box-Muller algorithm to generate two Gaussian random numbers
+        // Only using one
+        rsq = 1000.0;
+        while (rsq >= 1.0 || rsq == 0.0)
+          {
+            v1 = 2.0 * drand48() - 1.0;
+            v2 = 2.0 * drand48() - 1.0;
+            rsq = v1*v1 + v2 *v2;
+          }
+        fac = sqrt(-2.0 * log(rsq) / rsq);
+        // Choose a radius from  Gaussian distribution and add a random angle (electrons)
+        rcloud = Fe55CloudRadius * v1 * fac;
+        phiangle = 2.0 * pi * drand48();
+        theta = acos(-1.0 + 2.0 * drand48());
+        Ecloud[n][0] = xcenter + rcloud * sin(theta) * cos(phiangle);
+        Ecloud[n][1] = ycenter + rcloud * sin(theta) * sin(phiangle);
+        Ecloud[n][2] = zcenter + rcloud * cos(theta);
+        // Choose a radius from  Gaussian distribution and add a random angle (holes)
+        rcloud = Fe55CloudRadius * v2 * fac;
+        phiangle = 2.0 * pi * drand48();
+        theta = acos(-1.0 + 2.0 * drand48());
+        Hcloud[n][0] = xcenter + rcloud * sin(theta) * cos(phiangle);
+        Hcloud[n][1] = ycenter + rcloud * sin(theta) * sin(phiangle);
+        Hcloud[n][2] = zcenter + rcloud * cos(theta);
+        // Log initial position.
+        file << setw(8) << n << setw(8) << tracesteps << setw(3) << phase
+             << setw(15) << Ecloud[n][0] << setw(15) << Ecloud[n][1] << setw(15) << Ecloud[n][2] << endl;
+        // Log initial position.
+        hfile << setw(8) << n << setw(8) << tracesteps << setw(3) << phase
+             << setw(15) << Hcloud[n][0] << setw(15) << Hcloud[n][1] << setw(15) << Hcloud[n][2] << endl;
+      }
+    //Calculate the thermal velocity
+    // Thermal Velocity - 0.27 factor from Green, 1990
+    vth = sqrt(8.0 * KBOLTZMANN * CCDTemperature / (ME * 0.27 * pi))  * MICRON_PER_M * DiffMultiplier;
+    vth = vth / sqrt((double)NumDiffSteps);
+
+    // Now trace the cloud down, adding in the mutual repulsion at each step
+    // All electrons trace together
+    phase = 1;
+    bottomcount = 0;
+    topcount = 0;
+    while (tracesteps < tracestepsmax && bottomcount < NumElec)
+      {
+        tracesteps += 1;
+        for (n=0; n<NumElec; n++)
+          {
+            if (Ecloud[n][2] < zmin) continue; // This electron has finished
+            // Get the background field
+            for (i=0; i<3; i++)
+              {
+                E_interp[i] = E[i]->DataInterpolate3D(Ecloud[n][0],Ecloud[n][1],Ecloud[n][2]);
+              }
+            // Now add in the mutual repulsion, one electron at a time
+            for (nn=0; nn<NumElec; nn++)
+              {
+                if (n == nn || Ecloud[nn][2] < zmin) continue;
+                // Skip yourself, and anything which has reached the bottom
+                r2 = 0.0;
+                for (i=0; i<3; i++)
+                  {
+                    r[i] = Ecloud[n][i] - Ecloud[nn][i];
+                    r2 += max(MinRadiusSquared,r[i] * r[i]);
+                  }
+                sqrtr2 = sqrt(r2);
+                for (i=0; i<3; i++)
+                  {
+                    E_interp[i] += r[i] / (r2 * sqrtr2) * ElectronRepulsionFactor;
+                  }
+              }
+            // Now add in the mutual attraction, one hole at a time
+            for (nn=0; nn<NumElec; nn++)
+              {
+                if (Hcloud[nn][2] > zmax) continue;
+                // Skip any hole which has reached the top side
+                r2 = 0.0;
+                for (i=0; i<3; i++)
+                  {
+                    r[i] = Hcloud[nn][i] - Ecloud[n][i];
+                    r2 += max(MinRadiusSquared,r[i] * r[i]);
+                  }
+                sqrtr2 = sqrt(r2);
+                for (i=0; i<3; i++)
+                  {
+                    E_interp[i] += r[i] / (r2 * sqrtr2) * HoleRepulsionFactor;
+                  }
+              }
+            // Now calculate the step as a combination of diffusion and drift
+            // Just like in Trace().
+            E2 = 0.0;
+            for (i=0; i<3; i++)
+              {
+                E2 += E_interp[i] * E_interp[i];
+              }
+            Emag = max(0.1, sqrt(E2));
+            mu = mu_Si(Emag * MICRON_PER_CM, CCDTemperature); // Mobility
+            ve = mu * MICRON_PER_CM * MICRON_PER_CM; // Drift Velocity Factor (Velocity / E)
+            tau  = ME / QE * mu * METER_PER_CM * METER_PER_CM; // scattering time
+            Tscatt = -tau * log(1.0 - drand48()) * (double)NumDiffSteps;
+            phiangle = 2.0 * pi * drand48();
+            theta = acos(-1.0 + 2.0 * drand48());
+            Ecloud[n][0] += (vth * sin(theta) * cos(phiangle) + E_interp[0] * ve) * Tscatt;
+            Ecloud[n][1] += (vth * sin(theta) * sin(phiangle) + E_interp[1] * ve) * Tscatt;
+            Ecloud[n][2] += (vth * cos(theta) + E_interp[2] * ve) * Tscatt;
+            if(LogPixelPaths == 1)
+              {
+                // Log latest position update.
+                file << setw(8) << n << setw(8) << tracesteps << setw(3) << phase
+                     << setw(15) << Ecloud[n][0] << setw(15) << Ecloud[n][1] << setw(15) << Ecloud[n][2] << endl;
+              }
+            if (Ecloud[n][2] < zmin)
+              {
+                bottomcount += 1;
+                // Find the pixel the charge is in and add 1 electron to it.
+                int PixX = (int)floor((Ecloud[n][0] - PixelBoundaryLowerLeft[0]) / PixelSizeX);
+                int PixY = (int)floor((Ecloud[n][1] - PixelBoundaryLowerLeft[1]) / PixelSizeY);
+                j = PixX + PixelBoundaryNx * PixY;
+                if (j >= 0 && j < PixelBoundaryNx * PixelBoundaryNy)   CollectedCharge[0][j] += 1;
+                if (VerboseLevel > 1)
+                  {
+                    printf("In TraceFe55Cloud. Electron %d finished in Pixel (%d, %d)\n",n,PixX,PixY);
+                  }
+		// Log the last position update.
+                file << setw(8) << n << setw(8) << tracesteps << setw(3) << bottomphase
+                     << setw(15) << Ecloud[n][0] << setw(15) << Ecloud[n][1] << setw(15) << Ecloud[n][2] << endl;
+              }
+          } // ends n
+        // Now track the holes.
+        for (n=0; n<NumElec; n++)
+          {
+            if (Hcloud[n][2] > zmax) continue; // This hole has reached the top
+            // Get the background field
+            for (i=0; i<3; i++)
+              {
+                E_interp[i] = E[i]->DataInterpolate3D(Hcloud[n][0],Hcloud[n][1],Hcloud[n][2]);
+              }
+            // Now add in the mutual attraction, one electron at a time
+            for (nn=0; nn<NumElec; nn++)
+              {
+                if (Ecloud[nn][2] < zmin) continue;
+                // Skip anything which has reached the bottom
+                r2 = 0.0;
+                for (i=0; i<3; i++)
+                  {
+                    r[i] = Hcloud[n][i] - Ecloud[nn][i];
+                    r2 += max(MinRadiusSquared,r[i] * r[i]);
+                  }
+                sqrtr2 = sqrt(r2);
+                for (i=0; i<3; i++)
+                  {
+                    E_interp[i] += r[i] / (r2 * sqrtr2) * HoleRepulsionFactor;
+                  }
+              }
+            // Now add in the mutual repulsion, one hole at a time
+            for (nn=0; nn<NumElec; nn++)
+              {
+                if (n == nn || Hcloud[nn][2] > zmax) continue;
+                // Skip yourself and any hole which has reached the top side
+                r2 = 0.0;
+                for (i=0; i<3; i++)
+                  {
+                    r[i] = Hcloud[nn][i] - Hcloud[n][i];
+                    r2 += max(MinRadiusSquared,r[i] * r[i]);
+                  }
+                sqrtr2 = sqrt(r2);
+                for (i=0; i<3; i++)
+                  {
+                    E_interp[i] += r[i] / (r2 * sqrtr2) * HoleRepulsionFactor;
+                  }
+              }
+            E2 = 0.0;
+            for (i=0; i<3; i++)
+              {
+                E2 += E_interp[i] * E_interp[i];
+              }
+            // Now calculate the step as a combination of diffusion and drift
+            // Just like in Trace().
+            Emag = max(0.1, sqrt(E2));
+            mu = mu_Si(Emag * MICRON_PER_CM, CCDTemperature) / 3.0; // Mobility
+            // For now, use the hack that the hole mobility is 1/3 the electrons
+            // Reverse sign on ve because of opposite charge
+            ve = -mu * MICRON_PER_CM * MICRON_PER_CM; // Drift Velocity Factor (Velocity / E)
+            tau  = ME / QE * mu * METER_PER_CM * METER_PER_CM; // scattering time
+            Tscatt = -tau * log(1.0 - drand48()) * (double)NumDiffSteps;
+            phiangle = 2.0 * pi * drand48();
+            theta = acos(-1.0 + 2.0 * drand48());
+            Hcloud[n][0] += (vth * sin(theta) * cos(phiangle) + E_interp[0] * ve) * Tscatt;
+            Hcloud[n][1] += (vth * sin(theta) * sin(phiangle) + E_interp[1] * ve) * Tscatt;
+            Hcloud[n][2] += (vth * cos(theta) + E_interp[2] * ve) * Tscatt;
+            if(LogPixelPaths == 1)
+              {
+                // Log latest position update.
+                hfile << setw(8) << n << setw(8) << tracesteps << setw(3) << phase
+                     << setw(15) << Hcloud[n][0] << setw(15) << Hcloud[n][1] << setw(15) << Hcloud[n][2] << endl;
+              }
+            if (Hcloud[n][2] > zmax)
+              {
+                topcount += 1;
+                if (VerboseLevel > 1)
+                  {
+                    printf("In TraceFe55Cloud. Hole %d has reached the top after %d steps.\n",n,tracesteps);
+                  }
+                // Log the last position update.
+                hfile << setw(8) << n << setw(8) << tracesteps << setw(3) << bottomphase
+                     << setw(15) << Hcloud[n][0] << setw(15) << Hcloud[n][1] << setw(15) << Hcloud[n][2] << endl;
+              }
+          } // ends n
+      } // ends tracesteps
+    file.close();
+    hfile.close();
+    printf("Finished writing grid file - %s\n",filename.c_str());
+    printf("Finished writing grid file - %s\n",hfilename.c_str());
+    fflush(stdout);
+
+    for (n=0; n<NumElec; n++)
+      {
+        delete[] Ecloud[n];
+        delete[] Hcloud[n];
+      }
+    delete[] Ecloud;
+    delete[] Hcloud;
+    delete[] E_interp;
+    delete[] r;
+
   }
 
   return;
