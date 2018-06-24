@@ -2232,6 +2232,7 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
   double mu, E2, Emag, ve, vth, tau, Tscatt;
   double theta, phiangle, zmin, zmax, zbottom;
   zmax = SensorThickness;
+
   zmin = E[0]->z[Channelkmin] + 2.0 * FieldOxide; // Roughly the top of the collection region
   zbottom = E[0]->zmz[Channelkmin] + 0.01;
   double*  E_interp = new double[3];
@@ -2243,7 +2244,9 @@ void MultiGrid::Trace(double* point, int bottomsteps, bool savecharge, double bo
     }
   Emag = max(0.1, sqrt(E2));
   mu = mu_Si(Emag * MICRON_PER_CM, CCDTemperature); // Mobility
-  vth = sqrt(3.0 * KBOLTZMANN * CCDTemperature / ME)  * MICRON_PER_M * DiffMultiplier; // Thermal Velocity
+  //vth = sqrt(3.0 * KBOLTZMANN * CCDTemperature / ME)  * MICRON_PER_M * DiffMultiplier; // Thermal Velocity
+  // Thermal Velocity - 0.27 factor from Green, 1990
+  vth = sqrt(8.0 * KBOLTZMANN * CCDTemperature / (ME * 0.27 * pi))  * MICRON_PER_M * DiffMultiplier;
   vth = vth / sqrt((double)NumDiffSteps);
   tau  = ME / QE * mu * METER_PER_CM * METER_PER_CM; // scattering time
 
